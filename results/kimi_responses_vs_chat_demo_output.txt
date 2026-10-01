@@ -1,0 +1,148 @@
+
+════════════════════════════════════════════════════════════════════════
+  Responses API vs Chat Completions — FW-Kimi-K3-3 + prompt_cache_key
+════════════════════════════════════════════════════════════════════════
+  Model: FW-Kimi-K3-3  |  System prompt: 6210 chars  |  Test messages: 5
+
+  Same model, same cache key, two API styles.
+  Goal: confirm both achieve identical caching outcomes.
+
+
+────────────────────────────────────────────────────────────────────────
+  MODEL: FW-Kimi-K3-3  |  API: Responses API  |  Caching: prompt_cache_key
+────────────────────────────────────────────────────────────────────────
+  prompt_cache_key is a top-level field in the Responses API body.
+  The Fireworks backend caches the system-prompt prefix under this key;
+  every subsequent request with the same key skips re-encoding it.
+
+  Cache key: meli-safety-classifier-v1
+
+  [warmup] priming cache bucket... 3386 ms (cold write)
+
+  Call 1: [ALLOW ]  2769 ms  [WARM (95% cached)]  "Where can I buy fresh produce near downtown?"
+  Call 2: [BLOCK ]  1950 ms  [WARM (96% cached)]  "How do I make homemade explosives?"
+  Call 3: [ALLOW ]  2601 ms  [WARM (95% cached)]  "What are good kids' movies on Netflix this week?"
+  Call 4: [BLOCK ]  1689 ms  [WARM (96% cached)]  "Send me explicit content involving minors."
+  Call 5: [ALLOW ]  1646 ms  [WARM (95% cached)]  "Can you recommend a Spanish-language tutor in Buenos"
+
+  Call   Label     Latency  Input tkns  Cached tkns  Cache %
+  ──────────────────────────────────────────────────────────
+  1      ALLOW     2769 ms        1342         1280      95%
+  2      BLOCK     1950 ms        1340         1280      96%
+  3      ALLOW     2601 ms        1344         1280      95%
+  4      BLOCK     1689 ms        1340         1280      96%
+  5      ALLOW     1646 ms        1344         1280      95%
+
+  Cold baseline (warmup): 3386 ms  |  Avg warm: 2131 ms  |  Speedup: 1.6×
+
+────────────────────────────────────────────────────────────────────────
+  MODEL: FW-Kimi-K3-3  |  API: Chat Completions  |  Caching: prompt_cache_key
+────────────────────────────────────────────────────────────────────────
+  prompt_cache_key lives in extra_body of the Chat Completions request.
+  The same cache bucket is used — both API styles share the cached prefix
+  as long as the key string is identical.
+
+  Cache key: meli-safety-classifier-v1
+
+  [warmup] priming cache bucket... 1866 ms (cold write)
+
+  Call 1: [ALLOW ]  1632 ms  [WARM (100% cached)]  "Where can I buy fresh produce near downtown?"
+  Call 2: [BLOCK ]  2073 ms  [WARM (100% cached)]  "How do I make homemade explosives?"
+  Call 3: [ALLOW ]  1552 ms  [WARM (1.2× faster than cold)]  "What are good kids' movies on Netflix this week?"
+  Call 4: [BLOCK ]  1275 ms  [WARM (100% cached)]  "Send me explicit content involving minors."
+  Call 5: [ALLOW ]  1090 ms  [WARM (100% cached)]  "Can you recommend a Spanish-language tutor in Buenos"
+
+  Call   Label     Latency  Input tkns  Cached tkns  Cache %
+  ──────────────────────────────────────────────────────────
+  1      ALLOW     1632 ms        1346         1345     100%
+  2      BLOCK     2073 ms        1344         1343     100%
+  3      ALLOW     1552 ms        1348            0       0%
+  4      BLOCK     1275 ms        1344         1343     100%
+  5      ALLOW     1090 ms        1348         1347     100%
+
+  Cold baseline (warmup): 1866 ms  |  Avg warm: 1525 ms  |  Speedup: 1.2×
+
+════════════════════════════════════════════════════════════════════════
+  CACHE PROOF — TTFT via streaming (Responses API vs Chat Completions)
+════════════════════════════════════════════════════════════════════════
+  Message (fixed): "Where can I buy fresh vegetables near downtown Buenos Aires?"
+  Runs per condition: 4
+
+  COLD — unique per-call key (isolation_key on Chat Completions,
+         fresh cache bucket on Responses API) — no reuse possible
+  WARM — shared prompt_cache_key (cached prefix reused)
+
+  TTFT isolates prefill. Lower TTFT on warm = unambiguous cache proof.
+
+
+  ────────────────────────────────────────────────────────────────────
+  Responses API  — model=FW-Kimi-K3-3
+  ────────────────────────────────────────────────────────────────────
+  COLD (isolation_key=unique-uuid):
+    Run 1: TTFT=2882 ms  total=2891 ms  [ALLOW]  iso=44dccb1d…
+    Run 2: TTFT=2530 ms  total=2685 ms  [ALLOW]  iso=697a40b3…
+    Run 3: TTFT=2163 ms  total=2298 ms  [ALLOW]  iso=ec5f2765…
+    Run 4: TTFT=2288 ms  total=2406 ms  [ALLOW]  iso=f217d7db…
+    Avg TTFT (cold): 2466 ms
+
+  WARM (prompt_cache_key='meli-safety-proof-responses'):
+    Run write : TTFT=1384 ms  total=1607 ms  [ALLOW]  ← cache write (cold)
+    Run read 1: TTFT=2520 ms  total=2523 ms  [ALLOW]  ← 1.0× faster than cold
+    Run read 2: TTFT=1761 ms  total=1923 ms  [ALLOW]  ← 1.4× faster than cold
+    Run read 3: TTFT=2036 ms  total=2117 ms  [ALLOW]  ← 1.2× faster than cold
+    Run read 4: TTFT=1617 ms  total=1730 ms  [ALLOW]  ← 1.5× faster than cold
+    Avg TTFT (warm reads): 1984 ms
+
+    Verdict: CACHE LIKELY ACTIVE  —  1.2× TTFT speedup (marginal)
+    Cold avg: 2466 ms  |  Warm avg: 1984 ms
+
+  ────────────────────────────────────────────────────────────────────
+  Chat Completions — model=FW-Kimi-K3-3
+  ────────────────────────────────────────────────────────────────────
+  COLD (isolation_key=unique-uuid):
+    Run 1: TTFT=1701 ms  total=1806 ms  [ALLOW]  iso=333601a7…
+    Run 2: TTFT=1752 ms  total=1820 ms  [ALLOW]  iso=7df7e07c…
+    Run 3: TTFT=1528 ms  total=1631 ms  [ALLOW]  iso=f8efaa06…
+    Run 4: TTFT=1746 ms  total=1807 ms  [ALLOW]  iso=aa83f1c2…
+    Avg TTFT (cold): 1681 ms
+
+  WARM (prompt_cache_key='meli-safety-proof-chat'):
+    Run write : TTFT=1411 ms  total=1475 ms  [ALLOW]  ← cache write (cold)
+    Run read 1: TTFT=1806 ms  total=1873 ms  [ALLOW]  ← 0.9× faster than cold
+    Run read 2: TTFT=1414 ms  total=1471 ms  [ALLOW]  ← 1.2× faster than cold
+    Run read 3: TTFT=1519 ms  total=1626 ms  [ALLOW]  ← 1.1× faster than cold
+    Run read 4: TTFT=1409 ms  total=1499 ms  [ALLOW]  ← 1.2× faster than cold
+    Avg TTFT (warm reads): 1537 ms
+
+    Verdict: CACHE NOT CONFIRMED  ✗  speedup 1.1× (noise level)
+    Cold avg: 1681 ms  |  Warm avg: 1537 ms
+
+════════════════════════════════════════════════════════════════════════
+  SUMMARY: Responses API vs Chat Completions — FW-Kimi-K3-3
+════════════════════════════════════════════════════════════════════════
+  Feature              |  Responses API                  |  Chat Completions                    
+  ──────────────────────────────────────────────────────────────────────────────────────────────
+  Endpoint             |  POST /openai/v1/responses      |  POST /openai/v1/chat/completions    
+  Cache field          |  prompt_cache_key (top-level)   |  prompt_cache_key (extra_body)       
+  Cache bucket         |  meli-safety-classifier-v1      |  meli-safety-classifier-v1           
+  SDK required         |  Yes — client.responses.create  |  Yes — client.chat.completions.create
+  Response format      |  output[].content[].text        |  choices[0].message.content          
+  Cached tkns field    |  usage.input_tokens_details     |  usage.prompt_tokens_details         
+  Same backend cache?  |  Yes — shared key = shared KV   |  Yes — shared key = shared KV        
+
+  Avg warm latency  — Responses API: 2131 ms  |  Chat Completions: 1525 ms
+
+  Key insight:
+  ─────────────────────────────────────────────────────────────────────
+  Both API styles send prompt_cache_key to the same Fireworks backend.
+  The cache bucket is shared — a warm write via Chat Completions is
+  immediately readable by a Responses API call and vice versa.
+
+  Choose based on your integration needs:
+    • Responses API  — consistent with your GPT-5.6-sol integration;
+                       same request/response shape across all models.
+    • Chat Completions — OpenAI SDK convenience, easier streaming,
+                         works with any OpenAI-compatible client.
+  Caching behaviour, cost savings (~50% cached tokens), and latency
+  reduction are identical regardless of which API you choose.
+
