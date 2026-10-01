@@ -1,6 +1,6 @@
 # Prompt Caching Demos
 
-End-to-end, runnable demos of **LLM prompt caching on Azure AI Foundry** — built around a production use case: a **Mercado Libre-style content-safety classifier** that sends the same ~1,280-token system prompt with every one of millions of short user messages.
+End-to-end, runnable demos of **LLM prompt caching on Microsoft Foundry** — built around a production use case: a **Mercado Libre-style content-safety classifier** that sends the same ~1,280-token system prompt with every one of millions of short user messages.
 
 Written for **Solutions Architects and Solutions Engineers** to run live in front of customers or hand over as a reference.
 
@@ -50,7 +50,7 @@ The demos prove caching is actually happening with hard numbers — token-level 
 
 ## Setup
 
-Requires an Azure AI Foundry project with access to a GPT-5.x Responses-API model and a Fireworks model (e.g. `FW-Kimi-K3-3`).
+Requires an Microsoft Foundry project with access to a GPT-5.x Responses-API model and a Fireworks model (e.g. `FW-Kimi-K3-3`).
 
 ```bash
 python -m venv .venv
@@ -125,7 +125,7 @@ Walks the full **stateful Responses API lifecycle** with `store=True`:
 
 | Layer | What's stored | Retention / control |
 |---|---|---|
-| **Azure/Foundry** (`store=True` only) | Full request (system prompt + user message) and completion; response ID for retrieval and chaining | Stored until deleted via API; delete works per ID |
+| **Microsoft/Foundry** (`store=True` only) | Full request (system prompt + user message) and completion; response ID for retrieval and chaining | Stored until deleted via API; delete works per ID |
 | **Fireworks** (prompt cache) | KV-cache of the prompt prefix — **volatile memory only** | Minutes to hours, evicted oldest-first; never persisted to disk. The gateway itself reports `prompt_cache_retention: "in_memory"` |
 | **Fireworks logs** | Metadata only (token counts) | Operational, no customer content |
 

@@ -14,7 +14,7 @@ Compares two caching strategies for the Mercado Libre safety-classifier use case
 Both achieve the same outcome: the static system prompt is cached after the
 first request and only the short user message is processed on subsequent calls.
 
-Azure AI Foundry endpoint: https://ganacfoundryeastus.services.ai.azure.com/api/projects/proj-default
+Microsoft Foundry endpoint: https://ganacfoundryeastus.services.ai.azure.com/api/projects/proj-default
 """
 
 import os
@@ -27,7 +27,7 @@ from openai import OpenAI
 # Set FOUNDRY_KEY in your environment (see .env.example). Never commit keys.
 FOUNDRY_KEY      = os.environ["FOUNDRY_KEY"]
 FOUNDRY_ENDPOINT = "https://ganacfoundryeastus.services.ai.azure.com/api/projects/proj-default"
-V1_BASE          = f"{FOUNDRY_ENDPOINT}/openai/v1"   # no api-version — Azure /v1 path
+V1_BASE          = f"{FOUNDRY_ENDPOINT}/openai/v1"   # no api-version — Microsoft Foundry /v1 path
 
 KIMI_MODEL = "FW-Kimi-K3-3"
 GPT_MODEL  = "gpt-5.6-sol"
@@ -395,7 +395,7 @@ def run_kimi_demo():
         "  sticky routing or header changes needed. Direct analogue of GPT's\n"
         "  prompt_cache_breakpoint, expressed as a body field.\n"
         "\n"
-        "  NOTE: The Azure Foundry gateway does not surface cached_tokens in the\n"
+        "  NOTE: The Microsoft Foundry gateway does not surface cached_tokens in the\n"
         "  usage response for this model. Cache hits appear as latency reduction\n"
         "  vs the cold baseline.\n"
     )
@@ -419,7 +419,7 @@ def run_kimi_demo():
         else:
             speedup = cold_ms / result["latency_s"]
             # Use latency vs cold baseline as cache signal (cached_tokens not
-            # surfaced by the Azure Foundry gateway for this model)
+            # surfaced by the Microsoft Foundry gateway for this model)
             cache_note = (
                 f"WARM ({speedup:.1f}× faster than cold)"
                 if result["latency_s"] < cold_ms * 0.85

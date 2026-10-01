@@ -25,7 +25,7 @@ In production MELI would likely use store=False (stateless), but this demo
 shows exactly what IS retained when store=True so the customer can make an
 informed data-retention decision.
 
-Azure AI Foundry endpoint: https://ganacfoundryeastus.services.ai.azure.com/api/projects/proj-default
+Microsoft Foundry endpoint: https://ganacfoundryeastus.services.ai.azure.com/api/projects/proj-default
 """
 
 import os
@@ -441,9 +441,9 @@ def print_summary():
     print(f"{'═' * 72}")
     rows = [
         ("Layer",          "What is stored",                          "Retention / control"),
-        ("Azure/Foundry",  "Full request (system prompt + user msg)", "Stored until deleted;"),
+        ("Microsoft/Foundry",  "Full request (system prompt + user msg)", "Stored until deleted;"),
         ("   (Responses",  "Full completion (model output)",          "  delete via API, or"),
-        ("    API store)", "Response ID for retrieval & chaining",    "  per Azure retention"),
+        ("    API store)", "Response ID for retrieval & chaining",    "  per Microsoft retention"),
         ("Fireworks",      "KV-cache of prompt prefix (RAM only)",    "Minutes–hours, evicted"),
         ("   (cache)",     "  — prompt caching, independent of store", "  oldest-first; never"),
         ("",               "",                                        "  persisted to disk"),

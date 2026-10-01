@@ -2,7 +2,7 @@
 """
 Demo: Responses API vs Chat Completions — FW-Kimi-K3-3 with prompt_cache_key
 ─────────────────────────────────────────────────────────────────────────────
-Compares two ways to invoke FW-Kimi-K3-3 on Azure AI Foundry with caching:
+Compares two ways to invoke FW-Kimi-K3-3 on Microsoft Foundry with caching:
 
   1. Responses API     — client.responses.create(...)
                          (OpenAI SDK, /openai/v1/ base URL — per MS migration guide)
@@ -14,7 +14,7 @@ Compares two ways to invoke FW-Kimi-K3-3 on Azure AI Foundry with caching:
 Both target the same model, same system prompt, same cache key.
 Use case: Mercado Libre content-safety classifier.
 
-Azure AI Foundry endpoint: https://ganacfoundryeastus.services.ai.azure.com/api/projects/proj-default
+Microsoft Foundry endpoint: https://ganacfoundryeastus.services.ai.azure.com/api/projects/proj-default
 """
 
 import os

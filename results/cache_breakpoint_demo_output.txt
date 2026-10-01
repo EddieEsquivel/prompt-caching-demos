@@ -40,7 +40,7 @@
   sticky routing or header changes needed. Direct analogue of GPT's
   prompt_cache_breakpoint, expressed as a body field.
 
-  NOTE: The Azure Foundry gateway does not surface cached_tokens in the
+  NOTE: The Microsoft Foundry gateway does not surface cached_tokens in the
   usage response for this model. Cache hits appear as latency reduction
   vs the cold baseline.
 
