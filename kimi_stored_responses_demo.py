@@ -20,8 +20,8 @@ Shows what the Responses API persists server-side when store=True:
 Also demonstrates that prompt caching (prompt_cache_key) works alongside
 stored responses — two independent mechanisms.
 
-Use case context: Mercado Libre safety classifier on FW-Kimi-K3-3.
-In production MELI would likely use store=False (stateless), but this demo
+Use case context: a production safety classifier on FW-Kimi-K3-3.
+In production you would likely use store=False (stateless), but this demo
 shows exactly what IS retained when store=True so the customer can make an
 informed data-retention decision.
 
@@ -39,11 +39,11 @@ FOUNDRY_ENDPOINT = "https://ganacfoundryeastus.services.ai.azure.com/api/project
 V1_BASE          = f"{FOUNDRY_ENDPOINT}/openai/v1"
 
 KIMI_MODEL = "FW-Kimi-K3-3"
-CACHE_KEY  = "meli-safety-classifier-v1"
+CACHE_KEY  = "safety-classifier-v1"
 
 # ── Safety-classifier system prompt (same as other demos) ───────────────────
 SYSTEM_PROMPT = """\
-You are a content-safety classifier for Mercado Libre, Latin America's largest \
+You are a content-safety classifier for a large Latin American \
 e-commerce and fintech platform. Your job is to assess every incoming user message \
 or listing description and return exactly one of three labels.
 
@@ -101,7 +101,7 @@ ALLOW if the message:
 
 REVIEW if the message involves:
   • Kratom, CBD, or other substances with inconsistent legal status across
-    Mercado Libre's operating countries (Argentina, Brazil, Mexico, Colombia,
+    the platform's operating countries (Argentina, Brazil, Mexico, Colombia,
     Chile, Uruguay, Peru, Ecuador, Bolivia, Venezuela).
   • Drug testing kits or harm-reduction paraphernalia (legality varies).
   • Vague references to "substances" or "products" without clear identification.
@@ -455,7 +455,7 @@ def print_summary():
         if i == 0:
             print("  " + "─" * (sum(col_w) + 10))
     print(
-        "\n  Recommendation for MELI's classifier workload:\n"
+        "\n  Recommendation for this classifier workload:\n"
         "  ─────────────────────────────────────────────────────────────────────\n"
         "  • store=False (default in the other demos) is the right choice for a\n"
         "    stateless classifier — nothing persists, best data-retention posture.\n"

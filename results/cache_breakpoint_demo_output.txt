@@ -44,7 +44,7 @@
   usage response for this model. Cache hits appear as latency reduction
   vs the cold baseline.
 
-  Cache key (stable per classifier version): meli-safety-classifier-v1
+  Cache key (stable per classifier version): safety-classifier-v1
 
   [warmup] writing system prompt to cache bucket... 2461 ms (cold write)
 
@@ -88,7 +88,7 @@
     Avg TTFT (cold): 1982 ms
 
   ────────────────────────────────────────────────────────────
-  WARM (prompt_cache_key='meli-safety-proof-key' — shared cache bucket)
+  WARM (prompt_cache_key='safety-proof-key' — shared cache bucket)
   ────────────────────────────────────────────────────────────
     Run write : TTFT=1672 ms  total=1728 ms  [ALLOW]  ← cache write (cold)
     Run read 1: TTFT=1902 ms  total=1969 ms  [ALLOW]  ← 1.0× faster than cold avg
@@ -117,14 +117,14 @@
   Warm call            |  Prefix skipped (cached tokens)   |  Prefix from KV cache        
   Cost saving          |  ~50% off cached input tokens     |  ~50% off cached input tokens
 
-  Takeaway for Mercado Libre / Kimi-K3-3:
+  Takeaway for this classifier workload / Kimi-K3-3:
   ─────────────────────────────────────────────────────────────────────
   prompt_cache_key is the Fireworks equivalent of prompt_cache_breakpoint.
-  Set it to a stable string (e.g. 'meli-safety-classifier-v1') in the
+  Set it to a stable string (e.g. 'safety-classifier-v1') in the
   request body and Fireworks caches the system-prompt prefix under that
   key — no sticky routing, no header changes, no model-side support needed.
 
-  For MELI's classifier workload (same system prompt, millions of short
+  For this classifier workload (same system prompt, millions of short
   user messages): one shared prompt_cache_key across all classification
   requests ensures every call after the first warm write pays only for
   the short user message — same latency and cost savings as an explicit

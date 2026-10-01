@@ -1,6 +1,6 @@
 # Prompt Caching Demos
 
-End-to-end, runnable demos of **LLM prompt caching on Microsoft Foundry** — built around a production use case: a **Mercado Libre-style content-safety classifier** that sends the same ~1,280-token system prompt with every one of millions of short user messages.
+End-to-end, runnable demos of **LLM prompt caching on Microsoft Foundry** — built around a production use case: a high-volume **content-safety classifier** that sends the same ~1,280-token system prompt with every one of millions of short user messages.
 
 Written for **Solutions Architects and Solutions Engineers** to run live in front of customers or hand over as a reference.
 
@@ -71,7 +71,7 @@ Each script also has `FOUNDRY_ENDPOINT` / model names at the top — edit those 
 Runs the same 5 test messages through two caching strategies:
 
 1. **GPT-5.6-sol** via the Responses API with `prompt_cache_breakpoint: {mode: "explicit"}` on the system-prompt content block
-2. **FW-Kimi-K3-3** via Chat Completions with `prompt_cache_key: "meli-safety-classifier-v1"` in the request body
+2. **FW-Kimi-K3-3** via Chat Completions with `prompt_cache_key: "safety-classifier-v1"` in the request body
 
 Then runs a **TTFT cache proof**: the same message streamed under two conditions —
 
@@ -139,7 +139,7 @@ Zero Data Retention is Fireworks' default: prompt and generation data exist only
 
 - **`cached_tokens` is the reliable signal.** Some runs show intermittent 0%-cache calls (bucket evicted under load) — cache retention is best-effort, minutes to hours. Expect occasional cold re-writes in production; steady traffic to one stable key maximizes hit rate.
 - **Ignore single-run speedup averages** on reasoning models — generation-time variance dominates. Trust the cached-token column and the TTFT A/B.
-- **Cache key choice matters:** one stable key per system-prompt version (e.g. `meli-safety-classifier-v1`). Bump the version suffix whenever the prompt changes — a changed prefix invalidates the cache anyway, and a new key keeps buckets clean.
+- **Cache key choice matters:** one stable key per system-prompt version (e.g. `safety-classifier-v1`). Bump the version suffix whenever the prompt changes — a changed prefix invalidates the cache anyway, and a new key keeps buckets clean.
 - **Accuracy is unaffected.** Caching reuses encoded input state only; every response is sampled fresh. All demos classify 5/5 correctly warm or cold.
 - **Minimum prefix:** GPT-5.x requires ≥1,024 tokens for the cache breakpoint; Fireworks caching benefits from long stable prefixes similarly. The demo system prompt is ~1,280 tokens to be production-realistic.
 

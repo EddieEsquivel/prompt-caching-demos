@@ -12,7 +12,7 @@ Compares two ways to invoke FW-Kimi-K3-3 on Microsoft Foundry with caching:
                          prompt_cache_key in extra_body (OpenAI SDK)
 
 Both target the same model, same system prompt, same cache key.
-Use case: Mercado Libre content-safety classifier.
+Use case: production content-safety classifier.
 
 Microsoft Foundry endpoint: https://ganacfoundryeastus.services.ai.azure.com/api/projects/proj-default
 """
@@ -32,11 +32,11 @@ KIMI_MODEL = "FW-Kimi-K3-3"
 
 # Stable cache bucket key — same key used by both API styles so they share
 # the same cached KV state on the Fireworks backend.
-CACHE_KEY = "meli-safety-classifier-v1"
+CACHE_KEY = "safety-classifier-v1"
 
 # ── Safety-classifier system prompt (production-realistic, 1200+ tokens) ───
 SYSTEM_PROMPT = """\
-You are a content-safety classifier for Mercado Libre, Latin America's largest \
+You are a content-safety classifier for a large Latin American \
 e-commerce and fintech platform. Your job is to assess every incoming user message \
 or listing description and return exactly one of three labels.
 
@@ -94,7 +94,7 @@ ALLOW if the message:
 
 REVIEW if the message involves:
   • Kratom, CBD, or other substances with inconsistent legal status across
-    Mercado Libre's operating countries (Argentina, Brazil, Mexico, Colombia,
+    the platform's operating countries (Argentina, Brazil, Mexico, Colombia,
     Chile, Uruguay, Peru, Ecuador, Bolivia, Venezuela).
   • Drug testing kits or harm-reduction paraphernalia (legality varies).
   • Vague references to "substances" or "products" without clear identification.
@@ -518,8 +518,8 @@ def ttft_streaming(
 
 
 def prove_cache_works(client: OpenAI):
-    proof_key_responses = "meli-safety-proof-responses"
-    proof_key_chat      = "meli-safety-proof-chat"
+    proof_key_responses = "safety-proof-responses"
+    proof_key_chat      = "safety-proof-chat"
 
     print(f"\n{'═' * 72}")
     print("  CACHE PROOF — TTFT via streaming (Responses API vs Chat Completions)")

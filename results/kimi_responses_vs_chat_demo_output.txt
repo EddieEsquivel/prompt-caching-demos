@@ -15,7 +15,7 @@
   The Fireworks backend caches the system-prompt prefix under this key;
   every subsequent request with the same key skips re-encoding it.
 
-  Cache key: meli-safety-classifier-v1
+  Cache key: safety-classifier-v1
 
   [warmup] priming cache bucket... 3386 ms (cold write)
 
@@ -42,7 +42,7 @@
   The same cache bucket is used — both API styles share the cached prefix
   as long as the key string is identical.
 
-  Cache key: meli-safety-classifier-v1
+  Cache key: safety-classifier-v1
 
   [warmup] priming cache bucket... 1866 ms (cold write)
 
@@ -85,7 +85,7 @@
     Run 4: TTFT=2288 ms  total=2406 ms  [ALLOW]  iso=f217d7db…
     Avg TTFT (cold): 2466 ms
 
-  WARM (prompt_cache_key='meli-safety-proof-responses'):
+  WARM (prompt_cache_key='safety-proof-responses'):
     Run write : TTFT=1384 ms  total=1607 ms  [ALLOW]  ← cache write (cold)
     Run read 1: TTFT=2520 ms  total=2523 ms  [ALLOW]  ← 1.0× faster than cold
     Run read 2: TTFT=1761 ms  total=1923 ms  [ALLOW]  ← 1.4× faster than cold
@@ -106,7 +106,7 @@
     Run 4: TTFT=1746 ms  total=1807 ms  [ALLOW]  iso=aa83f1c2…
     Avg TTFT (cold): 1681 ms
 
-  WARM (prompt_cache_key='meli-safety-proof-chat'):
+  WARM (prompt_cache_key='safety-proof-chat'):
     Run write : TTFT=1411 ms  total=1475 ms  [ALLOW]  ← cache write (cold)
     Run read 1: TTFT=1806 ms  total=1873 ms  [ALLOW]  ← 0.9× faster than cold
     Run read 2: TTFT=1414 ms  total=1471 ms  [ALLOW]  ← 1.2× faster than cold
@@ -124,7 +124,7 @@
   ──────────────────────────────────────────────────────────────────────────────────────────────
   Endpoint             |  POST /openai/v1/responses      |  POST /openai/v1/chat/completions    
   Cache field          |  prompt_cache_key (top-level)   |  prompt_cache_key (extra_body)       
-  Cache bucket         |  meli-safety-classifier-v1      |  meli-safety-classifier-v1           
+  Cache bucket         |  safety-classifier-v1      |  safety-classifier-v1           
   SDK required         |  Yes — client.responses.create  |  Yes — client.chat.completions.create
   Response format      |  output[].content[].text        |  choices[0].message.content          
   Cached tkns field    |  usage.input_tokens_details     |  usage.prompt_tokens_details         

@@ -17,7 +17,7 @@
     • prompt_cache_key    → Fireworks KV-cache skips re-encoding the prefix
   This proves the Responses API supports prompt caching, not just storage.
 
-  Cache key: meli-safety-classifier-v1
+  Cache key: safety-classifier-v1
 
   [warmup] priming cache bucket... 3557 ms (cold write)
 
@@ -130,7 +130,7 @@
                   |                                            |    persisted to disk    
   Fireworks logs  |  Metadata only (token counts)              |  Operational, no content
 
-  Recommendation for MELI's classifier workload:
+  Recommendation for this classifier workload:
   ─────────────────────────────────────────────────────────────────────
   • store=False (default in the other demos) is the right choice for a
     stateless classifier — nothing persists, best data-retention posture.

@@ -2,7 +2,7 @@
 """
 Demo: Prompt Cache Equivalence
 ─────────────────────────────────────────────────────────────────────────────
-Compares two caching strategies for the Mercado Libre safety-classifier use case:
+Compares two caching strategies for a production safety-classifier use case:
 
   1. GPT-5.6-sol   → explicit prompt_cache_breakpoint (Responses API)
   2. FW-Kimi-K3-3  → Fireworks session affinity (x-session-affinity header)
@@ -34,9 +34,9 @@ GPT_MODEL  = "gpt-5.6-sol"
 
 # ── Safety-classifier system prompt (production-realistic length, 1200+ tokens) ─
 # Caching requires ≥1024 tokens on GPT-5.6 and benefits Fireworks KV-cache too.
-# A real MELI deployment would have a prompt this size with per-category rules.
+# A real deployment would have a prompt this size with per-category rules.
 SYSTEM_PROMPT = """\
-You are a content-safety classifier for Mercado Libre, Latin America's largest \
+You are a content-safety classifier for a large Latin American \
 e-commerce and fintech platform. Your job is to assess every incoming user message \
 or listing description and return exactly one of three labels.
 
@@ -94,7 +94,7 @@ ALLOW if the message:
 
 REVIEW if the message involves:
   • Kratom, CBD, or other substances with inconsistent legal status across
-    Mercado Libre's operating countries (Argentina, Brazil, Mexico, Colombia,
+    the platform's operating countries (Argentina, Brazil, Mexico, Colombia,
     Chile, Uruguay, Peru, Ecuador, Bolivia, Venezuela).
   • Drug testing kits or harm-reduction paraphernalia (legality varies).
   • Vague references to "substances" or "products" without clear identification.
@@ -322,7 +322,7 @@ def run_gpt_demo():
 # Stable key that names the cache bucket for the system-prompt prefix.
 # All requests sharing this key reuse the same cached KV state, regardless
 # of which replica they land on — no sticky routing needed.
-KIMI_CACHE_KEY = "meli-safety-classifier-v1"
+KIMI_CACHE_KEY = "safety-classifier-v1"
 
 
 def build_openai_client() -> OpenAI:
@@ -471,14 +471,14 @@ def print_summary():
             print("  " + "─" * (sum(col_w) + 10))
     print()
     print(
-        "  Takeaway for Mercado Libre / Kimi-K3-3:\n"
+        "  Takeaway for this classifier workload / Kimi-K3-3:\n"
         "  ─────────────────────────────────────────────────────────────────────\n"
         "  prompt_cache_key is the Fireworks equivalent of prompt_cache_breakpoint.\n"
-        "  Set it to a stable string (e.g. 'meli-safety-classifier-v1') in the\n"
+        "  Set it to a stable string (e.g. 'safety-classifier-v1') in the\n"
         "  request body and Fireworks caches the system-prompt prefix under that\n"
         "  key — no sticky routing, no header changes, no model-side support needed.\n"
         "\n"
-        "  For MELI's classifier workload (same system prompt, millions of short\n"
+        "  For this classifier workload (same system prompt, millions of short\n"
         "  user messages): one shared prompt_cache_key across all classification\n"
         "  requests ensures every call after the first warm write pays only for\n"
         "  the short user message — same latency and cost savings as an explicit\n"
@@ -553,7 +553,7 @@ def ttft_streaming(
 
 def prove_cache_works():
     client = build_openai_client()
-    proof_key = "meli-safety-proof-key"
+    proof_key = "safety-proof-key"
 
     print(f"\n{'═' * 72}")
     print("  CACHE PROOF — TTFT (Time To First Token) via streaming")
