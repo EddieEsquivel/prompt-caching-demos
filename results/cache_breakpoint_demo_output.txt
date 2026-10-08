@@ -10,29 +10,28 @@
 
 
 ────────────────────────────────────────────────────────────────────────
-  MODEL: gpt-5.4-nano  |  Strategy: prompt_cache_breakpoint (Responses API)
+  MODEL: gpt-5.6-sol  |  Strategy: prompt_cache_breakpoint (Responses API)
 ────────────────────────────────────────────────────────────────────────
   The static system prompt is marked with prompt_cache_breakpoint mode='explicit'
   when the model supports it. After the first call the server caches that
   prefix; subsequent calls skip re-encoding it. If the model rejects the
   field, the demo falls back to implicit prefix caching (identical prefix).
 
-  [info] gpt-5.4-nano does not support prompt_cache_breakpoint — falling back to implicit prefix caching (identical stable prefix).
-  Call 1: [ALLOW ]  1759 ms  [COLD]  "Where can I buy fresh produce near downtown?"
-  Call 2: [BLOCK ]  4526 ms  [WARM (80% cached)]  "How do I make homemade explosives?"
-  Call 3: [ALLOW ]  1529 ms  [WARM (79% cached)]  "What are good kids' movies on Netflix this week?"
-  Call 4: [BLOCK ]  2421 ms  [WARM (80% cached)]  "Send me explicit content involving minors."
-  Call 5: [ALLOW ]  1995 ms  [WARM (79% cached)]  "Can you recommend a Spanish-language tutor in Buenos Ai"
+  Call 1: [ALLOW ]  2042 ms  [COLD]  "Where can I buy fresh produce near downtown?"
+  Call 2: [BLOCK ]  2152 ms  [WARM (99% cached)]  "How do I make homemade explosives?"
+  Call 3: [ALLOW ]  2089 ms  [WARM (98% cached)]  "What are good kids' movies on Netflix this week?"
+  Call 4: [BLOCK ]  2379 ms  [WARM (99% cached)]  "Send me explicit content involving minors."
+  Call 5: [ALLOW ]  2202 ms  [WARM (98% cached)]  "Can you recommend a Spanish-language tutor in Buenos Ai"
 
   Call   Label     Latency  Input tkns  Cached tkns  Cache %
   ──────────────────────────────────────────────────────────
-  1      ALLOW     1759 ms        1287            0       0%
-  2      BLOCK     4526 ms        1285         1024      80%
-  3      ALLOW     1529 ms        1289         1024      79%
-  4      BLOCK     2421 ms        1285         1024      80%
-  5      ALLOW     1995 ms        1289         1024      79%
+  1      ALLOW     2042 ms        1287            0       0%
+  2      BLOCK     2152 ms        1285         1266      99%
+  3      ALLOW     2089 ms        1289         1266      98%
+  4      BLOCK     2379 ms        1285         1266      99%
+  5      ALLOW     2202 ms        1289         1266      98%
 
-  First call (cold): 1759 ms  |  Avg warm: 2618 ms
+  First call (cold): 2042 ms  |  Avg warm: 2206 ms
 
 ────────────────────────────────────────────────────────────────────────
   MODEL: FW-Kimi-K3  |  Strategy: prompt_cache_key (Chat Completions)
@@ -46,23 +45,23 @@
 
   Cache key (stable per classifier version): safety-classifier-v1
 
-  [warmup] writing system prompt to cache bucket... 4012 ms (cold write)
+  [warmup] writing system prompt to cache bucket... 8870 ms (cold write)
 
-  Call 1: [ALLOW ]  4474 ms  [WARM (100% cached)]  "Where can I buy fresh produce near downtown?"
-  Call 2: [BLOCK ]  3612 ms  [WARM (100% cached)]  "How do I make homemade explosives?"
-  Call 3: [ALLOW ]  2906 ms  [WARM (100% cached)]  "What are good kids' movies on Netflix this week?"
-  Call 4: [BLOCK ]  4420 ms  [WARM (100% cached)]  "Send me explicit content involving minors."
-  Call 5: [ALLOW ]  3174 ms  [WARM (100% cached)]  "Can you recommend a Spanish-language tutor in Bu"
+  Call 1: [ALLOW ]  4570 ms  [WARM (100% cached)]  "Where can I buy fresh produce near downtown?"
+  Call 2: [BLOCK ]  4156 ms  [WARM (100% cached)]  "How do I make homemade explosives?"
+  Call 3: [ALLOW ]  3514 ms  [WARM (100% cached)]  "What are good kids' movies on Netflix this week?"
+  Call 4: [BLOCK ]  3670 ms  [WARM (100% cached)]  "Send me explicit content involving minors."
+  Call 5: [ALLOW ]  6104 ms  [WARM (100% cached)]  "Can you recommend a Spanish-language tutor in Bu"
 
   Call   Label     Latency  Input tkns  Cached tkns  Cache %
   ──────────────────────────────────────────────────────────
-  1      ALLOW     4474 ms        1342         1341     100%
-  2      BLOCK     3612 ms        1340         1339     100%
-  3      ALLOW     2906 ms        1344         1343     100%
-  4      BLOCK     4420 ms        1340         1339     100%
-  5      ALLOW     3174 ms        1344         1343     100%
+  1      ALLOW     4570 ms        1342         1341     100%
+  2      BLOCK     4156 ms        1340         1339     100%
+  3      ALLOW     3514 ms        1344         1343     100%
+  4      BLOCK     3670 ms        1340         1339     100%
+  5      ALLOW     6104 ms        1344         1343     100%
 
-  Cold baseline (warmup): 4012 ms  |  Avg warm: 3717 ms  |  Speedup: 1.1×
+  Cold baseline (warmup): 8870 ms  |  Avg warm: 4403 ms  |  Speedup: 2.0×
 
 ════════════════════════════════════════════════════════════════════════
   CACHE PROOF — TTFT (Time To First Token) via streaming
@@ -81,25 +80,25 @@
   ────────────────────────────────────────────────────────────
   COLD (prompt_cache_isolation_key=unique-uuid — no reuse possible)
   ────────────────────────────────────────────────────────────
-    Run 1: TTFT=4401 ms  total=4639 ms  [ALLOW]  iso=495a223e…
-    Run 2: TTFT=2408 ms  total=2619 ms  [ALLOW]  iso=5df61bd7…
-    Run 3: TTFT=3209 ms  total=3256 ms  [ALLOW]  iso=13b11de4…
-    Run 4: TTFT=3563 ms  total=3564 ms  [ALLOW]  iso=a9428e88…
-    Avg TTFT (cold): 3395 ms
+    Run 1: TTFT=4680 ms  total=4865 ms  [ALLOW]  iso=016585a4…
+    Run 2: TTFT=5869 ms  total=6034 ms  [ALLOW]  iso=ee022480…
+    Run 3: TTFT=6603 ms  total=6664 ms  [ALLOW]  iso=a07a93da…
+    Run 4: TTFT=5189 ms  total=5332 ms  [ALLOW]  iso=7e78277b…
+    Avg TTFT (cold): 5585 ms
 
   ────────────────────────────────────────────────────────────
   WARM (prompt_cache_key='safety-proof-key' — shared cache bucket)
   ────────────────────────────────────────────────────────────
-    Run write : TTFT=9787 ms  total=9788 ms  [ALLOW]  ← cache write (cold)
-    Run read 1: TTFT=3030 ms  total=3126 ms  [ALLOW]  ← 1.1× faster than cold avg
-    Run read 2: TTFT=4767 ms  total=4908 ms  [ALLOW]  ← 0.7× faster than cold avg
-    Run read 3: TTFT=2786 ms  total=2950 ms  [ALLOW]  ← 1.2× faster than cold avg
-    Run read 4: TTFT=3062 ms  total=3063 ms  [ALLOW]  ← 1.1× faster than cold avg
-    Avg TTFT (warm reads): 3411 ms
+    Run write : TTFT=4159 ms  total=4363 ms  [ALLOW]  ← cache write (cold)
+    Run read 1: TTFT=2869 ms  total=3034 ms  [ALLOW]  ← 1.9× faster than cold avg
+    Run read 2: TTFT=4547 ms  total=4767 ms  [ALLOW]  ← 1.2× faster than cold avg
+    Run read 3: TTFT=4222 ms  total=4366 ms  [ALLOW]  ← 1.3× faster than cold avg
+    Run read 4: TTFT=3207 ms  total=3347 ms  [ALLOW]  ← 1.7× faster than cold avg
+    Avg TTFT (warm reads): 3711 ms
 
   ────────────────────────────────────────────────────────────
-  Verdict: CACHE NOT CONFIRMED  ✗  speedup only 1.0× (noise level)
-  Cold avg TTFT: 3395 ms  |  Warm avg TTFT: 3411 ms
+  Verdict: CACHE IS ACTIVE  ✓  1.5× TTFT speedup on warm reads
+  Cold avg TTFT: 5585 ms  |  Warm avg TTFT: 3711 ms
   ────────────────────────────────────────────────────────────
 
 
