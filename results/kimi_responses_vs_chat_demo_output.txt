@@ -2,14 +2,14 @@
 ════════════════════════════════════════════════════════════════════════
   Responses API vs Chat Completions — FW-Kimi-K3-3 + prompt_cache_key
 ════════════════════════════════════════════════════════════════════════
-  Model: FW-Kimi-K3-3  |  System prompt: 6210 chars  |  Test messages: 5
+  Model: FW-Kimi-K3  |  System prompt: 6193 chars  |  Test messages: 5
 
   Same model, same cache key, two API styles.
   Goal: confirm both achieve identical caching outcomes.
 
 
 ────────────────────────────────────────────────────────────────────────
-  MODEL: FW-Kimi-K3-3  |  API: Responses API  |  Caching: prompt_cache_key
+  MODEL: FW-Kimi-K3  |  API: Responses API  |  Caching: prompt_cache_key
 ────────────────────────────────────────────────────────────────────────
   prompt_cache_key is a top-level field in the Responses API body.
   The Fireworks backend caches the system-prompt prefix under this key;
@@ -17,26 +17,26 @@
 
   Cache key: safety-classifier-v1
 
-  [warmup] priming cache bucket... 3386 ms (cold write)
+  [warmup] priming cache bucket... 4680 ms (cold write)
 
-  Call 1: [ALLOW ]  2769 ms  [WARM (95% cached)]  "Where can I buy fresh produce near downtown?"
-  Call 2: [BLOCK ]  1950 ms  [WARM (96% cached)]  "How do I make homemade explosives?"
-  Call 3: [ALLOW ]  2601 ms  [WARM (95% cached)]  "What are good kids' movies on Netflix this week?"
-  Call 4: [BLOCK ]  1689 ms  [WARM (96% cached)]  "Send me explicit content involving minors."
-  Call 5: [ALLOW ]  1646 ms  [WARM (95% cached)]  "Can you recommend a Spanish-language tutor in Buenos"
+  Call 1: [ALLOW ]  7254 ms  [WARM (prompt_cache_key active)]  "Where can I buy fresh produce near downtown?"
+  Call 2: [BLOCK ]  4774 ms  [WARM (prompt_cache_key active)]  "How do I make homemade explosives?"
+  Call 3: [ALLOW ]  4079 ms  [WARM (prompt_cache_key active)]  "What are good kids' movies on Netflix this week?"
+  Call 4: [BLOCK ]  3526 ms  [WARM (1.3× faster than cold)]  "Send me explicit content involving minors."
+  Call 5: [ALLOW ]  5778 ms  [WARM (prompt_cache_key active)]  "Can you recommend a Spanish-language tutor in Buenos"
 
   Call   Label     Latency  Input tkns  Cached tkns  Cache %
   ──────────────────────────────────────────────────────────
-  1      ALLOW     2769 ms        1342         1280      95%
-  2      BLOCK     1950 ms        1340         1280      96%
-  3      ALLOW     2601 ms        1344         1280      95%
-  4      BLOCK     1689 ms        1340         1280      96%
-  5      ALLOW     1646 ms        1344         1280      95%
+  1      ALLOW     7254 ms        1338            0       0%
+  2      BLOCK     4774 ms        1336            0       0%
+  3      ALLOW     4079 ms        1340            0       0%
+  4      BLOCK     3526 ms        1336            0       0%
+  5      ALLOW     5778 ms        1340            0       0%
 
-  Cold baseline (warmup): 3386 ms  |  Avg warm: 2131 ms  |  Speedup: 1.6×
+  Cold baseline (warmup): 4680 ms  |  Avg warm: 5082 ms  |  Speedup: 0.9×
 
 ────────────────────────────────────────────────────────────────────────
-  MODEL: FW-Kimi-K3-3  |  API: Chat Completions  |  Caching: prompt_cache_key
+  MODEL: FW-Kimi-K3  |  API: Chat Completions  |  Caching: prompt_cache_key
 ────────────────────────────────────────────────────────────────────────
   prompt_cache_key lives in extra_body of the Chat Completions request.
   The same cache bucket is used — both API styles share the cached prefix
@@ -44,23 +44,23 @@
 
   Cache key: safety-classifier-v1
 
-  [warmup] priming cache bucket... 1866 ms (cold write)
+  [warmup] priming cache bucket... 4389 ms (cold write)
 
-  Call 1: [ALLOW ]  1632 ms  [WARM (100% cached)]  "Where can I buy fresh produce near downtown?"
-  Call 2: [BLOCK ]  2073 ms  [WARM (100% cached)]  "How do I make homemade explosives?"
-  Call 3: [ALLOW ]  1552 ms  [WARM (1.2× faster than cold)]  "What are good kids' movies on Netflix this week?"
-  Call 4: [BLOCK ]  1275 ms  [WARM (100% cached)]  "Send me explicit content involving minors."
-  Call 5: [ALLOW ]  1090 ms  [WARM (100% cached)]  "Can you recommend a Spanish-language tutor in Buenos"
+  Call 1: [ALLOW ]  2912 ms  [WARM (100% cached)]  "Where can I buy fresh produce near downtown?"
+  Call 2: [BLOCK ]  3319 ms  [WARM (100% cached)]  "How do I make homemade explosives?"
+  Call 3: [ALLOW ]  3040 ms  [WARM (100% cached)]  "What are good kids' movies on Netflix this week?"
+  Call 4: [BLOCK ]  5027 ms  [WARM (100% cached)]  "Send me explicit content involving minors."
+  Call 5: [ALLOW ]  3223 ms  [WARM (100% cached)]  "Can you recommend a Spanish-language tutor in Buenos"
 
   Call   Label     Latency  Input tkns  Cached tkns  Cache %
   ──────────────────────────────────────────────────────────
-  1      ALLOW     1632 ms        1346         1345     100%
-  2      BLOCK     2073 ms        1344         1343     100%
-  3      ALLOW     1552 ms        1348            0       0%
-  4      BLOCK     1275 ms        1344         1343     100%
-  5      ALLOW     1090 ms        1348         1347     100%
+  1      ALLOW     2912 ms        1342         1341     100%
+  2      BLOCK     3319 ms        1340         1339     100%
+  3      ALLOW     3040 ms        1344         1343     100%
+  4      BLOCK     5027 ms        1340         1339     100%
+  5      ALLOW     3223 ms        1344         1343     100%
 
-  Cold baseline (warmup): 1866 ms  |  Avg warm: 1525 ms  |  Speedup: 1.2×
+  Cold baseline (warmup): 4389 ms  |  Avg warm: 3504 ms  |  Speedup: 1.3×
 
 ════════════════════════════════════════════════════════════════════════
   CACHE PROOF — TTFT via streaming (Responses API vs Chat Completions)
@@ -76,46 +76,46 @@
 
 
   ────────────────────────────────────────────────────────────────────
-  Responses API  — model=FW-Kimi-K3-3
+  Responses API  — model=FW-Kimi-K3
   ────────────────────────────────────────────────────────────────────
   COLD (isolation_key=unique-uuid):
-    Run 1: TTFT=2882 ms  total=2891 ms  [ALLOW]  iso=44dccb1d…
-    Run 2: TTFT=2530 ms  total=2685 ms  [ALLOW]  iso=697a40b3…
-    Run 3: TTFT=2163 ms  total=2298 ms  [ALLOW]  iso=ec5f2765…
-    Run 4: TTFT=2288 ms  total=2406 ms  [ALLOW]  iso=f217d7db…
-    Avg TTFT (cold): 2466 ms
+    Run 1: TTFT=8137 ms  total=8307 ms  [ALLOW]  iso=022e1d79…
+    Run 2: TTFT=5416 ms  total=5565 ms  [ALLOW]  iso=f426deac…
+    Run 3: TTFT=4664 ms  total=4793 ms  [ALLOW]  iso=0ec9f7f9…
+    Run 4: TTFT=5556 ms  total=5778 ms  [ALLOW]  iso=44cb9b75…
+    Avg TTFT (cold): 5943 ms
 
   WARM (prompt_cache_key='safety-proof-responses'):
-    Run write : TTFT=1384 ms  total=1607 ms  [ALLOW]  ← cache write (cold)
-    Run read 1: TTFT=2520 ms  total=2523 ms  [ALLOW]  ← 1.0× faster than cold
-    Run read 2: TTFT=1761 ms  total=1923 ms  [ALLOW]  ← 1.4× faster than cold
-    Run read 3: TTFT=2036 ms  total=2117 ms  [ALLOW]  ← 1.2× faster than cold
-    Run read 4: TTFT=1617 ms  total=1730 ms  [ALLOW]  ← 1.5× faster than cold
-    Avg TTFT (warm reads): 1984 ms
+    Run write : TTFT=3516 ms  total=3822 ms  [ALLOW]  ← cache write (cold)
+    Run read 1: TTFT=5297 ms  total=5542 ms  [ALLOW]  ← 1.1× faster than cold
+    Run read 2: TTFT=3480 ms  total=3645 ms  [ALLOW]  ← 1.7× faster than cold
+    Run read 3: TTFT=4805 ms  total=4887 ms  [ALLOW]  ← 1.2× faster than cold
+    Run read 4: TTFT=4278 ms  total=4471 ms  [ALLOW]  ← 1.4× faster than cold
+    Avg TTFT (warm reads): 4465 ms
 
-    Verdict: CACHE LIKELY ACTIVE  —  1.2× TTFT speedup (marginal)
-    Cold avg: 2466 ms  |  Warm avg: 1984 ms
+    Verdict: CACHE LIKELY ACTIVE  —  1.3× TTFT speedup (marginal)
+    Cold avg: 5943 ms  |  Warm avg: 4465 ms
 
   ────────────────────────────────────────────────────────────────────
-  Chat Completions — model=FW-Kimi-K3-3
+  Chat Completions — model=FW-Kimi-K3
   ────────────────────────────────────────────────────────────────────
   COLD (isolation_key=unique-uuid):
-    Run 1: TTFT=1701 ms  total=1806 ms  [ALLOW]  iso=333601a7…
-    Run 2: TTFT=1752 ms  total=1820 ms  [ALLOW]  iso=7df7e07c…
-    Run 3: TTFT=1528 ms  total=1631 ms  [ALLOW]  iso=f8efaa06…
-    Run 4: TTFT=1746 ms  total=1807 ms  [ALLOW]  iso=aa83f1c2…
-    Avg TTFT (cold): 1681 ms
+    Run 1: TTFT=2811 ms  total=2942 ms  [ALLOW]  iso=9e0c7707…
+    Run 2: TTFT=4054 ms  total=4112 ms  [ALLOW]  iso=5c21649b…
+    Run 3: TTFT=3070 ms  total=3192 ms  [ALLOW]  iso=3c52c0e5…
+    Run 4: TTFT=3972 ms  total=4061 ms  [ALLOW]  iso=428a19f2…
+    Avg TTFT (cold): 3477 ms
 
   WARM (prompt_cache_key='safety-proof-chat'):
-    Run write : TTFT=1411 ms  total=1475 ms  [ALLOW]  ← cache write (cold)
-    Run read 1: TTFT=1806 ms  total=1873 ms  [ALLOW]  ← 0.9× faster than cold
-    Run read 2: TTFT=1414 ms  total=1471 ms  [ALLOW]  ← 1.2× faster than cold
-    Run read 3: TTFT=1519 ms  total=1626 ms  [ALLOW]  ← 1.1× faster than cold
-    Run read 4: TTFT=1409 ms  total=1499 ms  [ALLOW]  ← 1.2× faster than cold
-    Avg TTFT (warm reads): 1537 ms
+    Run write : TTFT=2645 ms  total=2767 ms  [ALLOW]  ← cache write (cold)
+    Run read 1: TTFT=2948 ms  total=3147 ms  [ALLOW]  ← 1.2× faster than cold
+    Run read 2: TTFT=4080 ms  total=4248 ms  [ALLOW]  ← 0.9× faster than cold
+    Run read 3: TTFT=3186 ms  total=3308 ms  [ALLOW]  ← 1.1× faster than cold
+    Run read 4: TTFT=3303 ms  total=3304 ms  [ALLOW]  ← 1.1× faster than cold
+    Avg TTFT (warm reads): 3379 ms
 
-    Verdict: CACHE NOT CONFIRMED  ✗  speedup 1.1× (noise level)
-    Cold avg: 1681 ms  |  Warm avg: 1537 ms
+    Verdict: CACHE NOT CONFIRMED  ✗  speedup 1.0× (noise level)
+    Cold avg: 3477 ms  |  Warm avg: 3379 ms
 
 ════════════════════════════════════════════════════════════════════════
   SUMMARY: Responses API vs Chat Completions — FW-Kimi-K3-3
@@ -124,19 +124,19 @@
   ──────────────────────────────────────────────────────────────────────────────────────────────
   Endpoint             |  POST /openai/v1/responses      |  POST /openai/v1/chat/completions    
   Cache field          |  prompt_cache_key (top-level)   |  prompt_cache_key (extra_body)       
-  Cache bucket         |  safety-classifier-v1      |  safety-classifier-v1           
+  Cache bucket         |  safety-classifier-v1           |  safety-classifier-v1                
   SDK required         |  Yes — client.responses.create  |  Yes — client.chat.completions.create
   Response format      |  output[].content[].text        |  choices[0].message.content          
   Cached tkns field    |  usage.input_tokens_details     |  usage.prompt_tokens_details         
   Same backend cache?  |  Yes — shared key = shared KV   |  Yes — shared key = shared KV        
 
-  Avg warm latency  — Responses API: 2131 ms  |  Chat Completions: 1525 ms
+  Avg warm latency  — Responses API: 5082 ms  |  Chat Completions: 3504 ms
 
   Key insight:
   ─────────────────────────────────────────────────────────────────────
   Both API styles send prompt_cache_key to the same Fireworks backend.
-  The cache bucket is shared — a warm write via Chat Completions is
-  immediately readable by a Responses API call and vice versa.
+  Same key → same replica(s). Cross-API reuse holds when both shapes
+  render to the same token prefix; verify via cached_tokens.
 
   Choose based on your integration needs:
     • Responses API  — consistent with your GPT-5.6-sol integration;

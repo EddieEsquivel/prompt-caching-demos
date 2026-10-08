@@ -2,7 +2,7 @@
 ════════════════════════════════════════════════════════════════════════
   Prompt Cache Demo — prompt_cache_breakpoint vs. prompt_cache_key
 ════════════════════════════════════════════════════════════════════════
-  System prompt: 6210 chars  |  Test messages: 5
+  System prompt: 6193 chars  |  Test messages: 5
 
   The static system prompt (safety-classifier instructions) is identical
   across every classification request. Caching it avoids re-encoding it
@@ -10,59 +10,59 @@
 
 
 ────────────────────────────────────────────────────────────────────────
-  MODEL: gpt-5.6-sol  |  Strategy: prompt_cache_breakpoint (Responses API)
+  MODEL: gpt-5.4-nano  |  Strategy: prompt_cache_breakpoint (Responses API)
 ────────────────────────────────────────────────────────────────────────
-  The static system prompt is marked with prompt_cache_breakpoint mode='explicit'.
-  After the first call the server caches that prefix; subsequent calls skip
-  re-encoding it — only the short user message is processed.
+  The static system prompt is marked with prompt_cache_breakpoint mode='explicit'
+  when the model supports it. After the first call the server caches that
+  prefix; subsequent calls skip re-encoding it. If the model rejects the
+  field, the demo falls back to implicit prefix caching (identical prefix).
 
-  Call 1: [ALLOW ]  2846 ms  [COLD]  "Where can I buy fresh produce near downtown?"
-  Call 2: [BLOCK ]  3549 ms  [WARM (99% cached)]  "How do I make homemade explosives?"
-  Call 3: [ALLOW ]  1869 ms  [WARM (98% cached)]  "What are good kids' movies on Netflix this week?"
-  Call 4: [BLOCK ]  1620 ms  [WARM (99% cached)]  "Send me explicit content involving minors."
-  Call 5: [ALLOW ]  2245 ms  [WARM (98% cached)]  "Can you recommend a Spanish-language tutor in Buenos Ai"
+  [info] gpt-5.4-nano does not support prompt_cache_breakpoint — falling back to implicit prefix caching (identical stable prefix).
+  Call 1: [ALLOW ]  1759 ms  [COLD]  "Where can I buy fresh produce near downtown?"
+  Call 2: [BLOCK ]  4526 ms  [WARM (80% cached)]  "How do I make homemade explosives?"
+  Call 3: [ALLOW ]  1529 ms  [WARM (79% cached)]  "What are good kids' movies on Netflix this week?"
+  Call 4: [BLOCK ]  2421 ms  [WARM (80% cached)]  "Send me explicit content involving minors."
+  Call 5: [ALLOW ]  1995 ms  [WARM (79% cached)]  "Can you recommend a Spanish-language tutor in Buenos Ai"
 
   Call   Label     Latency  Input tkns  Cached tkns  Cache %
   ──────────────────────────────────────────────────────────
-  1      ALLOW     2846 ms        1289            0       0%
-  2      BLOCK     3549 ms        1287         1268      99%
-  3      ALLOW     1869 ms        1291         1268      98%
-  4      BLOCK     1620 ms        1287         1268      99%
-  5      ALLOW     2245 ms        1291         1268      98%
+  1      ALLOW     1759 ms        1287            0       0%
+  2      BLOCK     4526 ms        1285         1024      80%
+  3      ALLOW     1529 ms        1289         1024      79%
+  4      BLOCK     2421 ms        1285         1024      80%
+  5      ALLOW     1995 ms        1289         1024      79%
 
-  First call (cold): 2846 ms  |  Avg warm: 2321 ms
+  First call (cold): 1759 ms  |  Avg warm: 2618 ms
 
 ────────────────────────────────────────────────────────────────────────
-  MODEL: FW-Kimi-K3-3  |  Strategy: prompt_cache_key (Chat Completions)
+  MODEL: FW-Kimi-K3  |  Strategy: prompt_cache_key (Chat Completions)
 ────────────────────────────────────────────────────────────────────────
-  prompt_cache_key names the cache bucket for the system-prompt prefix.
-  Every request carrying the same key reuses the cached KV state — no
-  sticky routing or header changes needed. Direct analogue of GPT's
-  prompt_cache_breakpoint, expressed as a body field.
+  Prefix caching is automatic. prompt_cache_key routes requests that
+  share it to the same replica(s), where the cached KV state lives — one
+  body field, no header changes. Same outcome as GPT's
+  prompt_cache_breakpoint.
 
-  NOTE: The Microsoft Foundry gateway does not surface cached_tokens in the
-  usage response for this model. Cache hits appear as latency reduction
-  vs the cold baseline.
+  Cache hits are reported in usage.prompt_tokens_details.cached_tokens.
 
   Cache key (stable per classifier version): safety-classifier-v1
 
-  [warmup] writing system prompt to cache bucket... 2461 ms (cold write)
+  [warmup] writing system prompt to cache bucket... 4012 ms (cold write)
 
-  Call 1: [ALLOW ]  2004 ms  [WARM (1.2× faster than cold)]  "Where can I buy fresh produce near downtown?"
-  Call 2: [BLOCK ]  1401 ms  [WARM (1.8× faster than cold)]  "How do I make homemade explosives?"
-  Call 3: [ALLOW ]  1457 ms  [WARM (1.7× faster than cold)]  "What are good kids' movies on Netflix this week?"
-  Call 4: [BLOCK ]  1768 ms  [WARM (1.4× faster than cold)]  "Send me explicit content involving minors."
-  Call 5: [ALLOW ]  1144 ms  [WARM (2.2× faster than cold)]  "Can you recommend a Spanish-language tutor in Bu"
+  Call 1: [ALLOW ]  4474 ms  [WARM (100% cached)]  "Where can I buy fresh produce near downtown?"
+  Call 2: [BLOCK ]  3612 ms  [WARM (100% cached)]  "How do I make homemade explosives?"
+  Call 3: [ALLOW ]  2906 ms  [WARM (100% cached)]  "What are good kids' movies on Netflix this week?"
+  Call 4: [BLOCK ]  4420 ms  [WARM (100% cached)]  "Send me explicit content involving minors."
+  Call 5: [ALLOW ]  3174 ms  [WARM (100% cached)]  "Can you recommend a Spanish-language tutor in Bu"
 
   Call   Label     Latency  Input tkns  Cached tkns  Cache %
   ──────────────────────────────────────────────────────────
-  1      ALLOW     2004 ms        1346         1345     100%
-  2      BLOCK     1401 ms        1344         1343     100%
-  3      ALLOW     1457 ms        1348            0       0%
-  4      BLOCK     1768 ms        1344         1343     100%
-  5      ALLOW     1144 ms        1348         1347     100%
+  1      ALLOW     4474 ms        1342         1341     100%
+  2      BLOCK     3612 ms        1340         1339     100%
+  3      ALLOW     2906 ms        1344         1343     100%
+  4      BLOCK     4420 ms        1340         1339     100%
+  5      ALLOW     3174 ms        1344         1343     100%
 
-  Cold baseline (warmup): 2461 ms  |  Avg warm: 1555 ms  |  Speedup: 1.6×
+  Cold baseline (warmup): 4012 ms  |  Avg warm: 3717 ms  |  Speedup: 1.1×
 
 ════════════════════════════════════════════════════════════════════════
   CACHE PROOF — TTFT (Time To First Token) via streaming
@@ -81,25 +81,25 @@
   ────────────────────────────────────────────────────────────
   COLD (prompt_cache_isolation_key=unique-uuid — no reuse possible)
   ────────────────────────────────────────────────────────────
-    Run 1: TTFT=1803 ms  total=1819 ms  [ALLOW]  iso=c0084e06…
-    Run 2: TTFT=2001 ms  total=2202 ms  [ALLOW]  iso=87157ec4…
-    Run 3: TTFT=1827 ms  total=1894 ms  [ALLOW]  iso=aa4b34fb…
-    Run 4: TTFT=2297 ms  total=2397 ms  [ALLOW]  iso=539429f4…
-    Avg TTFT (cold): 1982 ms
+    Run 1: TTFT=4401 ms  total=4639 ms  [ALLOW]  iso=495a223e…
+    Run 2: TTFT=2408 ms  total=2619 ms  [ALLOW]  iso=5df61bd7…
+    Run 3: TTFT=3209 ms  total=3256 ms  [ALLOW]  iso=13b11de4…
+    Run 4: TTFT=3563 ms  total=3564 ms  [ALLOW]  iso=a9428e88…
+    Avg TTFT (cold): 3395 ms
 
   ────────────────────────────────────────────────────────────
   WARM (prompt_cache_key='safety-proof-key' — shared cache bucket)
   ────────────────────────────────────────────────────────────
-    Run write : TTFT=1672 ms  total=1728 ms  [ALLOW]  ← cache write (cold)
-    Run read 1: TTFT=1902 ms  total=1969 ms  [ALLOW]  ← 1.0× faster than cold avg
-    Run read 2: TTFT=1347 ms  total=1407 ms  [ALLOW]  ← 1.5× faster than cold avg
-    Run read 3: TTFT=1486 ms  total=1575 ms  [ALLOW]  ← 1.3× faster than cold avg
-    Run read 4: TTFT=2341 ms  total=2430 ms  [ALLOW]  ← 0.8× faster than cold avg
-    Avg TTFT (warm reads): 1769 ms
+    Run write : TTFT=9787 ms  total=9788 ms  [ALLOW]  ← cache write (cold)
+    Run read 1: TTFT=3030 ms  total=3126 ms  [ALLOW]  ← 1.1× faster than cold avg
+    Run read 2: TTFT=4767 ms  total=4908 ms  [ALLOW]  ← 0.7× faster than cold avg
+    Run read 3: TTFT=2786 ms  total=2950 ms  [ALLOW]  ← 1.2× faster than cold avg
+    Run read 4: TTFT=3062 ms  total=3063 ms  [ALLOW]  ← 1.1× faster than cold avg
+    Avg TTFT (warm reads): 3411 ms
 
   ────────────────────────────────────────────────────────────
-  Verdict: CACHE LIKELY ACTIVE  —  1.1× TTFT speedup (marginal)
-  Cold avg TTFT: 1982 ms  |  Warm avg TTFT: 1769 ms
+  Verdict: CACHE NOT CONFIRMED  ✗  speedup only 1.0× (noise level)
+  Cold avg TTFT: 3395 ms  |  Warm avg TTFT: 3411 ms
   ────────────────────────────────────────────────────────────
 
 
@@ -110,7 +110,8 @@
   ────────────────────────────────────────────────────────────────────────────────────────
   API                  |  Responses API                    |  Chat Completions            
   Caching mechanism    |  prompt_cache_breakpoint field    |  prompt_cache_key body field 
-  Explicit breakpoint  |  Yes — marks boundary in content  |  Yes — names the cache bucket
+  Explicit breakpoint  |  Yes — marks boundary in content  |  No — automatic prefix match 
+  Routing              |  Server-managed                   |  Key pins to same replica(s) 
   Client change        |  Add field to each request        |  Add field to each request   
   Cache scope          |  Server-managed (24h retention)   |  Server-managed KV cache     
   Cold call            |  Full prompt encoded              |  Full prompt encoded         
@@ -121,12 +122,11 @@
   ─────────────────────────────────────────────────────────────────────
   prompt_cache_key is the Fireworks equivalent of prompt_cache_breakpoint.
   Set it to a stable string (e.g. 'safety-classifier-v1') in the
-  request body and Fireworks caches the system-prompt prefix under that
-  key — no sticky routing, no header changes, no model-side support needed.
+  request body; requests sharing the key route to the same replica(s),
+  where the system-prompt prefix is already cached. No header changes.
 
-  For this classifier workload (same system prompt, millions of short
-  user messages): one shared prompt_cache_key across all classification
-  requests ensures every call after the first warm write pays only for
-  the short user message — same latency and cost savings as an explicit
-  prompt_cache_breakpoint.
+  Production scale (millions of short messages): KV cache is
+  replica-local, so a single key concentrates load on a few replicas.
+  Shard it into N buckets (e.g. 'safety-classifier-v1-0'..'-N') so each
+  bucket warms its own replica and throughput scales out.
 

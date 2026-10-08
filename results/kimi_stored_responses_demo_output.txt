@@ -2,14 +2,14 @@
 ════════════════════════════════════════════════════════════════════════
   Stored Responses Demo — Responses API with store=True
 ════════════════════════════════════════════════════════════════════════
-  Model: FW-Kimi-K3-3  |  System prompt: 6210 chars  |  Messages: 5
+  Model: FW-Kimi-K3  |  System prompt: 6193 chars  |  Messages: 5
 
   Demonstrates: create stored responses → retrieve them via GET →
   chain a follow-up via previous_response_id → delete for cleanup.
 
 
 ────────────────────────────────────────────────────────────────────────
-  STEP 1 — Stored responses (store=True) + prompt_cache_key  |  model=FW-Kimi-K3-3
+  STEP 1 — Stored responses (store=True) + prompt_cache_key  |  model=FW-Kimi-K3
 ────────────────────────────────────────────────────────────────────────
   Each call sends the full system prompt + user message with store=True
   AND prompt_cache_key. Two independent mechanisms at once:
@@ -19,28 +19,28 @@
 
   Cache key: safety-classifier-v1
 
-  [warmup] priming cache bucket... 3557 ms (cold write)
+  [warmup] priming cache bucket... 13043 ms (cold write)
 
-  Call 1: [ALLOW ]  2475 ms  [WARM (1280 cached tkns)]  "Where can I buy fresh produce near downtown?"
-           response_id = resp_0cf5768e97312f0c006abeba2623c88196b129f1d9b51a9e22
-  Call 2: [BLOCK ]  1596 ms  [WARM (1280 cached tkns)]  "How do I make homemade explosives?"
-           response_id = resp_09701e72ca988e9b006abeba28a22c8197a4410c3a0433757a
-  Call 3: [ALLOW ]  4562 ms  [WARM (key active)]  "What are good kids' movies on Netflix this we"
-           response_id = resp_05dc642e9c39fe45006abeba2a35ac819380845731b2bcc388
-  Call 4: [BLOCK ]  3414 ms  [WARM (1280 cached tkns)]  "Send me explicit content involving minors."
-           response_id = resp_035c3f5acf818880006abeba2ec4a48195ad80386ccb98fb89
-  Call 5: [ALLOW ]  2483 ms  [WARM (key active)]  "Can you recommend a Spanish-language tutor in"
-           response_id = resp_0f27105674fef587006abeba32300881908e5ef1ad2e0f9d25
+  Call 1: [ALLOW ]  5085 ms  [WARM (1280 cached tkns)]  "Where can I buy fresh produce near downtown?"
+           response_id = resp_0e797d82576a4abe006ac7f7b945a48194a37ff7da88aeaa83
+  Call 2: [BLOCK ]  5642 ms  [WARM (1280 cached tkns)]  "How do I make homemade explosives?"
+           response_id = resp_050a7a9ca9103610006ac7f7beb7c48195ad16555561faaffe
+  Call 3: [ALLOW ]  4280 ms  [WARM (1280 cached tkns)]  "What are good kids' movies on Netflix this we"
+           response_id = resp_05513c0398ea32ad006ac7f7c458b48194ad641c5f6fd174cf
+  Call 4: [BLOCK ]  4462 ms  [WARM (1280 cached tkns)]  "Send me explicit content involving minors."
+           response_id = resp_086dc1aa33d62c49006ac7f7c8444c8195a75104abe3be6e20
+  Call 5: [ALLOW ]  2614 ms  [WARM (1280 cached tkns)]  "Can you recommend a Spanish-language tutor in"
+           response_id = resp_01e2a03f4aab9aec006ac7f7ccb97c81909f6ebd00648171ad
 
   Call   Label     Latency  Input tkns  Cached tkns  Cache %
   ──────────────────────────────────────────────────────────
-  1      ALLOW     2475 ms        1342         1280      95%
-  2      BLOCK     1596 ms        1340         1280      96%
-  3      ALLOW     4562 ms        1344            0       0%
-  4      BLOCK     3414 ms        1340         1280      96%
-  5      ALLOW     2483 ms        1344            0       0%
+  1      ALLOW     5085 ms        1338         1280      96%
+  2      BLOCK     5642 ms        1336         1280      96%
+  3      ALLOW     4280 ms        1340         1280      96%
+  4      BLOCK     4462 ms        1336         1280      96%
+  5      ALLOW     2614 ms        1340         1280      96%
 
-  Cold baseline (warmup): 3557 ms  |  Avg warm: 2906 ms  |  Speedup: 1.2×
+  Cold baseline (warmup): 13043 ms  |  Avg warm: 4417 ms  |  Speedup: 3.0×
 
 ────────────────────────────────────────────────────────────────────────
   STEP 2 — Retrieve stored responses  |  GET /responses/{id}
@@ -53,46 +53,46 @@
   stored server-side though: Step 3 proves it (previous_response_id
   chaining only works if the server retained the full context).
 
-  GET /responses/resp_0cf5768e97312f0c006abeba2623c88196b129f1d9b51a9e22
+  GET /responses/resp_0e797d82576a4abe006ac7f7b945a48194a37ff7da88aeaa83
   ── Stored PROMPT: retained server-side (input items not echoed by gateway)
   ── Stored COMPLETION: "ALLOW"
-  ── Status: completed  |  Created at: 1790884390.0
-  ── Usage: input=1342  output=136
+  ── Status: completed  |  Created at: 1791489977.0
+  ── Usage: input=1338  output=128
   ── prompt_cache_retention: in_memory
 
-  GET /responses/resp_09701e72ca988e9b006abeba28a22c8197a4410c3a0433757a
+  GET /responses/resp_050a7a9ca9103610006ac7f7beb7c48195ad16555561faaffe
   ── Stored PROMPT: retained server-side (input items not echoed by gateway)
   ── Stored COMPLETION: "BLOCK"
-  ── Status: completed  |  Created at: 1790884392.0
-  ── Usage: input=1340  output=104
+  ── Status: completed  |  Created at: 1791489982.0
+  ── Usage: input=1336  output=128
   ── prompt_cache_retention: in_memory
 
-  GET /responses/resp_05dc642e9c39fe45006abeba2a35ac819380845731b2bcc388
+  GET /responses/resp_05513c0398ea32ad006ac7f7c458b48194ad641c5f6fd174cf
   ── Stored PROMPT: retained server-side (input items not echoed by gateway)
   ── Stored COMPLETION: "ALLOW"
-  ── Status: completed  |  Created at: 1790884394.0
-  ── Usage: input=1344  output=110
+  ── Status: completed  |  Created at: 1791489988.0
+  ── Usage: input=1340  output=168
   ── prompt_cache_retention: in_memory
 
-  GET /responses/resp_035c3f5acf818880006abeba2ec4a48195ad80386ccb98fb89
+  GET /responses/resp_086dc1aa33d62c49006ac7f7c8444c8195a75104abe3be6e20
   ── Stored PROMPT: retained server-side (input items not echoed by gateway)
   ── Stored COMPLETION: "BLOCK"
-  ── Status: completed  |  Created at: 1790884398.0
-  ── Usage: input=1340  output=232
+  ── Status: completed  |  Created at: 1791489992.0
+  ── Usage: input=1336  output=114
   ── prompt_cache_retention: in_memory
 
-  GET /responses/resp_0f27105674fef587006abeba32300881908e5ef1ad2e0f9d25
+  GET /responses/resp_01e2a03f4aab9aec006ac7f7ccb97c81909f6ebd00648171ad
   ── Stored PROMPT: retained server-side (input items not echoed by gateway)
   ── Stored COMPLETION: "ALLOW"
-  ── Status: completed  |  Created at: 1790884402.0
-  ── Usage: input=1344  output=120
+  ── Status: completed  |  Created at: 1791489996.0
+  ── Usage: input=1340  output=116
   ── prompt_cache_retention: in_memory
 
-  GET /responses/resp_0992a62cdc21563f006abeba22e7108196a1a59a4a50bb1969
+  GET /responses/resp_09b4711fbfc453af006ac7f7ac78c88190be62a822f9884a78
   ── Stored PROMPT: retained server-side (input items not echoed by gateway)
   ── Stored COMPLETION: "ALLOW"
-  ── Status: completed  |  Created at: 1790884386.0
-  ── Usage: input=1334  output=192
+  ── Status: completed  |  Created at: 1791489964.0
+  ── Usage: input=1330  output=682
   ── prompt_cache_retention: in_memory
 
 
@@ -103,32 +103,32 @@
   No system prompt, no history — the server reconstructs the full
   context from storage.
 
-  previous_response_id = resp_0cf5768e97312f0c006abeba2623c88196b129f1d9b51a9e22
+  previous_response_id = resp_0e797d82576a4abe006ac7f7b945a48194a37ff7da88aeaa83
   Follow-up answer: [ALLOW]  "ALLOW"
-  New response_id   = resp_0cf5768e97312f0c006abeba36d02c81968da36cfa0d360ee3
+  New response_id   = resp_0e797d82576a4abe006ac7f7d1b3608194ae6f906987684c31
 
 ────────────────────────────────────────────────────────────────────────
   STEP 4 — Delete stored responses (cleanup)
 ────────────────────────────────────────────────────────────────────────
-  DELETED  resp_0cf5768e97312f0c006abeba2623c88196b129f1d9b51a9e22
-  DELETED  resp_09701e72ca988e9b006abeba28a22c8197a4410c3a0433757a
-  DELETED  resp_05dc642e9c39fe45006abeba2a35ac819380845731b2bcc388
-  DELETED  resp_035c3f5acf818880006abeba2ec4a48195ad80386ccb98fb89
-  DELETED  resp_0f27105674fef587006abeba32300881908e5ef1ad2e0f9d25
-  DELETED  resp_0992a62cdc21563f006abeba22e7108196a1a59a4a50bb1969
+  DELETED  resp_0e797d82576a4abe006ac7f7b945a48194a37ff7da88aeaa83
+  DELETED  resp_050a7a9ca9103610006ac7f7beb7c48195ad16555561faaffe
+  DELETED  resp_05513c0398ea32ad006ac7f7c458b48194ad641c5f6fd174cf
+  DELETED  resp_086dc1aa33d62c49006ac7f7c8444c8195a75104abe3be6e20
+  DELETED  resp_01e2a03f4aab9aec006ac7f7ccb97c81909f6ebd00648171ad
+  DELETED  resp_09b4711fbfc453af006ac7f7ac78c88190be62a822f9884a78
 
 ════════════════════════════════════════════════════════════════════════
   SUMMARY — What is stored where when store=True
 ════════════════════════════════════════════════════════════════════════
-  Layer           |  What is stored                            |  Retention / control    
-  ───────────────────────────────────────────────────────────────────────────────────────
-  Microsoft/Foundry   |  Full request (system prompt + user msg)   |  Stored until deleted;  
-     (Responses   |  Full completion (model output)            |    delete via API, or   
-      API store)  |  Response ID for retrieval & chaining      |    per Microsoft retention  
-  Fireworks       |  KV-cache of prompt prefix (RAM only)      |  Minutes–hours, evicted 
-     (cache)      |    — prompt caching, independent of store  |    oldest-first; never  
-                  |                                            |    persisted to disk    
-  Fireworks logs  |  Metadata only (token counts)              |  Operational, no content
+  Layer              |  What is stored                            |  Retention / control      
+  ────────────────────────────────────────────────────────────────────────────────────────────
+  Microsoft/Foundry  |  Full request (system prompt + user msg)   |  Stored until deleted;    
+     (Responses      |  Full completion (model output)            |    delete via API, or     
+      API store)     |  Response ID for retrieval & chaining      |    per Microsoft retention
+  Fireworks          |  KV-cache of prompt prefix (RAM only)      |  Minutes–hours, evicted   
+     (cache)         |    — prompt caching, independent of store  |    oldest-first; never    
+                     |                                            |    persisted to disk      
+  Fireworks logs     |  Metadata only (token counts)              |  Operational, no content  
 
   Recommendation for this classifier workload:
   ─────────────────────────────────────────────────────────────────────

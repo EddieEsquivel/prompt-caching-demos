@@ -38,6 +38,10 @@ V1_BASE          = f"{FOUNDRY_ENDPOINT}/openai/v1"   # no api-version — Micros
 KIMI_MODEL = os.environ.get("KIMI_MODEL", "FW-Kimi-K3-3")
 GPT_MODEL  = os.environ.get("GPT_MODEL", "gpt-5.6-sol")
 
+# Set to False on first 400 "prompt_cache_breakpoint is not supported on this
+# model" — later calls then rely on implicit prefix caching with identical prefixes.
+_GPT_BREAKPOINT_SUPPORTED = True
+
 # ── Safety-classifier system prompt (production-realistic length, 1200+ tokens) ─
 # Caching requires ≥1024 tokens on GPT-5.6 and benefits Fireworks KV-cache too.
 # A real deployment would have a prompt this size with per-category rules.
@@ -200,32 +204,36 @@ def _extract_label(text: str) -> str:
 # GPT-5.6-sol — Responses API with prompt_cache_breakpoint
 # ══════════════════════════════════════════════════════════════════════════════
 
-def call_gpt_responses_api(user_text: str, idx: int) -> dict:
+def call_gpt_responses_api(user_text: str, idx: int, use_breakpoint: bool = True) -> dict:
     """
     Sends a request in the Responses API format — exactly the customer's sample.
     The prompt_cache_breakpoint marks where the static system prompt ends so the
     model server can cache everything before that point.
+
+    use_breakpoint=False omits the breakpoint field — fallback for models that
+    reject it (e.g. GPT-5.4-nano: "prompt_cache_breakpoint is not supported on
+    this model"). Those models still prefix-cache implicitly when the prompt
+    prefix is identical across calls.
     """
     url = f"{V1_BASE}/responses"
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {FOUNDRY_KEY}",
     }
+    system_content = {
+        "type": "input_text",
+        "text": SYSTEM_PROMPT,
+    }
+    if use_breakpoint:
+        system_content["prompt_cache_breakpoint"] = {"mode": "explicit"}
+
     payload = {
         "model": GPT_MODEL,
         "input": [
             {
                 "type": "message",          # required by Responses API
                 "role": "developer",
-                "content": [
-                    {
-                        "type": "input_text",
-                        "text": SYSTEM_PROMPT,
-                        "prompt_cache_breakpoint": {
-                            "mode": "explicit"
-                        }
-                    }
-                ]
+                "content": [system_content]
             },
             {
                 "type": "message",
@@ -240,6 +248,8 @@ def call_gpt_responses_api(user_text: str, idx: int) -> dict:
         ],
         "stream": False,
         "store": False,
+        # GPT-5.x rejects max_tokens; Responses API uses max_output_tokens.
+        "max_output_tokens": 512,
     }
 
     t0 = time.perf_counter()
@@ -247,7 +257,16 @@ def call_gpt_responses_api(user_text: str, idx: int) -> dict:
     elapsed = time.perf_counter() - t0
 
     if resp.status_code != 200:
-        return {"error": resp.status_code, "body": resp.text, "latency_s": elapsed, "call": idx + 1}
+        body = resp.text
+        # One-shot fallback: retry without the breakpoint field when the model
+        # rejects it, and remember so later calls skip the failing variant.
+        if use_breakpoint and "prompt_cache_breakpoint" in body:
+            global _GPT_BREAKPOINT_SUPPORTED
+            _GPT_BREAKPOINT_SUPPORTED = False
+            print(f"  [info] {GPT_MODEL} does not support prompt_cache_breakpoint — "
+                  "falling back to implicit prefix caching (identical stable prefix).")
+            return call_gpt_responses_api(user_text, idx, use_breakpoint=False)
+        return {"error": resp.status_code, "body": body, "latency_s": elapsed, "call": idx + 1}
 
     data = resp.json()
 
@@ -293,14 +312,15 @@ def run_gpt_demo():
     print(f"  MODEL: {GPT_MODEL}  |  Strategy: prompt_cache_breakpoint (Responses API)")
     print(SEPARATOR)
     print(
-        "  The static system prompt is marked with prompt_cache_breakpoint mode='explicit'.\n"
-        "  After the first call the server caches that prefix; subsequent calls skip\n"
-        "  re-encoding it — only the short user message is processed.\n"
+        "  The static system prompt is marked with prompt_cache_breakpoint mode='explicit'\n"
+        "  when the model supports it. After the first call the server caches that\n"
+        "  prefix; subsequent calls skip re-encoding it. If the model rejects the\n"
+        "  field, the demo falls back to implicit prefix caching (identical prefix).\n"
     )
 
     results = []
     for i, msg in enumerate(TEST_MESSAGES):
-        result = call_gpt_responses_api(msg, i)
+        result = call_gpt_responses_api(msg, i, use_breakpoint=_GPT_BREAKPOINT_SUPPORTED)
         results.append(result)
 
         if "error" in result:
