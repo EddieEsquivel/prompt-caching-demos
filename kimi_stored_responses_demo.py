@@ -25,7 +25,8 @@ In production you would likely use store=False (stateless), but this demo
 shows exactly what IS retained when store=True so the customer can make an
 informed data-retention decision.
 
-Microsoft Foundry endpoint: https://ganacfoundryeastus.services.ai.azure.com/api/projects/proj-default
+Configure via environment: FOUNDRY_KEY (required), FOUNDRY_ENDPOINT,
+KIMI_MODEL (see .env.example).
 """
 
 import os
@@ -35,10 +36,13 @@ from openai import OpenAI
 # ── Foundry config ──────────────────────────────────────────────────────────
 # Set FOUNDRY_KEY in your environment (see .env.example). Never commit keys.
 FOUNDRY_KEY      = os.environ["FOUNDRY_KEY"]
-FOUNDRY_ENDPOINT = "https://ganacfoundryeastus.services.ai.azure.com/api/projects/proj-default"
+FOUNDRY_ENDPOINT = os.environ.get(
+    "FOUNDRY_ENDPOINT",
+    "https://ganacfoundryeastus.services.ai.azure.com/api/projects/proj-default",
+).rstrip("/")
 V1_BASE          = f"{FOUNDRY_ENDPOINT}/openai/v1"
 
-KIMI_MODEL = "FW-Kimi-K3-3"
+KIMI_MODEL = os.environ.get("KIMI_MODEL", "FW-Kimi-K3-3")
 CACHE_KEY  = "safety-classifier-v1"
 
 # ── Safety-classifier system prompt (same as other demos) ───────────────────

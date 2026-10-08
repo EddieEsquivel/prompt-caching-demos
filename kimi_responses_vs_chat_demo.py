@@ -14,7 +14,8 @@ Compares two ways to invoke FW-Kimi-K3-3 on Microsoft Foundry with caching:
 Both target the same model, same system prompt, same cache key.
 Use case: production content-safety classifier.
 
-Microsoft Foundry endpoint: https://ganacfoundryeastus.services.ai.azure.com/api/projects/proj-default
+Configure via environment: FOUNDRY_KEY (required), FOUNDRY_ENDPOINT,
+KIMI_MODEL (see .env.example).
 """
 
 import os
@@ -25,13 +26,16 @@ from openai import OpenAI
 # ── Foundry config ──────────────────────────────────────────────────────────
 # Set FOUNDRY_KEY in your environment (see .env.example). Never commit keys.
 FOUNDRY_KEY      = os.environ["FOUNDRY_KEY"]
-FOUNDRY_ENDPOINT = "https://ganacfoundryeastus.services.ai.azure.com/api/projects/proj-default"
+FOUNDRY_ENDPOINT = os.environ.get(
+    "FOUNDRY_ENDPOINT",
+    "https://ganacfoundryeastus.services.ai.azure.com/api/projects/proj-default",
+).rstrip("/")
 V1_BASE          = f"{FOUNDRY_ENDPOINT}/openai/v1"
 
-KIMI_MODEL = "FW-Kimi-K3-3"
+KIMI_MODEL = os.environ.get("KIMI_MODEL", "FW-Kimi-K3-3")
 
-# Stable cache bucket key — same key used by both API styles so they share
-# the same cached KV state on the Fireworks backend.
+# Stable routing/affinity key — same key for both API styles, so requests
+# route to the same replica(s) where the cached system-prompt prefix lives.
 CACHE_KEY = "safety-classifier-v1"
 
 # ── Safety-classifier system prompt (production-realistic, 1200+ tokens) ───
@@ -208,8 +212,8 @@ def call_kimi_responses_api(client: OpenAI, user_text: str, idx: int) -> dict:
         client.responses.create(...)
     per https://learn.microsoft.com/en-us/azure/developer/ai/how-to/azure-openai-to-responses
 
-    prompt_cache_key is passed via extra_body — it names the cache bucket
-    so all requests sharing this key reuse the same cached KV state.
+    prompt_cache_key is passed via extra_body — it routes requests sharing the
+    key to the same replica(s), where prefix caching reuses the KV state.
     Response text is read from the convenience property response.output_text.
     Cache stats come from response.usage.input_tokens_details.cached_tokens.
     """
@@ -638,8 +642,8 @@ def print_summary(responses_results: list[dict], chat_results: list[dict]):
         "\n  Key insight:\n"
         "  ─────────────────────────────────────────────────────────────────────\n"
         "  Both API styles send prompt_cache_key to the same Fireworks backend.\n"
-        "  The cache bucket is shared — a warm write via Chat Completions is\n"
-        "  immediately readable by a Responses API call and vice versa.\n"
+        "  Same key → same replica(s). Cross-API reuse holds when both shapes\n"
+        "  render to the same token prefix; verify via cached_tokens.\n"
         "\n"
         "  Choose based on your integration needs:\n"
         "    • Responses API  — consistent with your GPT-5.6-sol integration;\n"

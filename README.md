@@ -27,7 +27,7 @@ The demos prove caching is actually happening with hard numbers — token-level 
 
 ### The core equivalence
 
-> **`prompt_cache_key` (Fireworks) is the direct equivalent of `prompt_cache_breakpoint` (GPT).** Same outcome — the static system prompt is cached after the first request, and only the short user message is processed on subsequent calls. Different syntax: a top-level body field naming a cache bucket, vs. a per-content marker.
+> **`prompt_cache_key` (Fireworks) is the direct equivalent of `prompt_cache_breakpoint` (GPT).** Same outcome — the static system prompt is cached after the first request, and only the short user message is processed on subsequent calls. Different mechanism: GPT marks the cache boundary explicitly in content; Fireworks matches the longest cached prefix automatically, and `prompt_cache_key` routes requests that share it to the same replica(s) where that prefix is cached (it is equivalent to the `x-session-affinity` header, which takes precedence if both are sent).
 
 ---
 
@@ -57,12 +57,13 @@ python -m venv .venv
 source .venv/bin/activate
 pip install openai requests
 
-export FOUNDRY_KEY="<your-foundry-key>"     # see .env.example
+cp .env.example .env    # then fill in FOUNDRY_KEY, FOUNDRY_ENDPOINT, model names
+set -a; source .env; set +a
 ```
 
 > **Never commit the key.** All three scripts read `FOUNDRY_KEY` from the environment and fail fast if it's unset.
 
-Each script also has `FOUNDRY_ENDPOINT` / model names at the top — edit those if your Foundry project or deployment names differ.
+All scripts read `FOUNDRY_ENDPOINT`, `KIMI_MODEL`, and `GPT_MODEL` from the environment (defaults point at the original demo project), so no code edits are needed to run against your own Foundry project.
 
 ---
 
@@ -104,7 +105,7 @@ Same model (`FW-Kimi-K3-3`), same cache key, **two API shapes**:
 
 Per the [Microsoft migration guide](https://learn.microsoft.com/en-us/azure/developer/ai/how-to/azure-openai-to-responses), the Responses API path uses the standard OpenAI SDK pointed at the `/openai/v1/` base URL. **Gotcha found in testing:** this Foundry gateway requires fully typed input items (`{"type": "message", "role": ..., "content": [{"type": "input_text", "text": ...}]}`) — the plain `{"role", "content"}` shortcut from the docs fails validation with `Invalid value: ''`. Also, `prompt_cache_isolation_key` is rejected by the Responses API (Chat Completions only); the demo enforces true-cold there with a unique cache-bucket name per call.
 
-**Sample result** ([full output](results/kimi_responses_vs_chat_demo_output.txt)): both API shapes show 95–100% cached tokens on warm calls — the backend cache bucket is shared across API styles, since it's keyed by the `prompt_cache_key` string, not the endpoint.
+**Sample result** ([full output](results/kimi_responses_vs_chat_demo_output.txt)): both API shapes show 95–100% cached tokens on warm calls — the same `prompt_cache_key` routes both API styles to the same replica(s), so the cached prefix is reused regardless of endpoint.
 
 ---
 
@@ -137,7 +138,7 @@ Zero Data Retention is Fireworks' default: prompt and generation data exist only
 
 ## Reading the results — SA/SE notes
 
-- **`cached_tokens` is the reliable signal.** Some runs show intermittent 0%-cache calls (bucket evicted under load) — cache retention is best-effort, minutes to hours. Expect occasional cold re-writes in production; steady traffic to one stable key maximizes hit rate.
+- **`cached_tokens` is the reliable signal.** Some runs show intermittent 0%-cache calls (bucket evicted under load) — cache retention is best-effort, minutes to hours. Expect occasional cold re-writes in production; steady traffic to a stable key maximizes hit rate. At high request rates, shard the key (e.g. `safety-classifier-v1-0` … `-N`): KV cache is replica-local, and a single key concentrates load on a few replicas.
 - **Ignore single-run speedup averages** on reasoning models — generation-time variance dominates. Trust the cached-token column and the TTFT A/B.
 - **Cache key choice matters:** one stable key per system-prompt version (e.g. `safety-classifier-v1`). Bump the version suffix whenever the prompt changes — a changed prefix invalidates the cache anyway, and a new key keeps buckets clean.
 - **Accuracy is unaffected.** Caching reuses encoded input state only; every response is sampled fresh. All demos classify 5/5 correctly warm or cold.
@@ -147,7 +148,7 @@ Zero Data Retention is Fireworks' default: prompt and generation data exist only
 
 ## Key takeaways for customer conversations
 
-1. **`prompt_cache_key` ≡ `prompt_cache_breakpoint`** — same savings, one body field, no sticky routing or header changes.
+1. **`prompt_cache_key` ≡ `prompt_cache_breakpoint`** — same savings, one body field, no header changes (the key itself provides the replica affinity).
 2. **~50% off cached input tokens** (Fireworks default discount) + **~1.5× lower warm latency** for this workload shape.
 3. **Works through both API shapes** — customer can standardize on the Responses API across all models, or keep Chat Completions; caching is identical.
 4. **Caching and storage are independent** — `prompt_cache_key` (RAM-only KV reuse) and `store=True` (server-side persistence) can be used together or separately.
