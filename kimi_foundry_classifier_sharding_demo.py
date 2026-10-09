@@ -148,8 +148,9 @@ OPERATIONAL RULES
 """
 
 # Stateless fan-out needs a stable prefix long enough to complete cache blocks
-# before the unique user suffix. Kimi K3 reports 2,048-token-aligned cache hits;
-# the shared ~1,280-token prompt used by conversational demos is too short.
+# before the unique user suffix. The tested Kimi K3 path defaults to 1,024-token
+# GDN/Mamba cache granularity; use a comfortably larger prefix because chat
+# formatting and cache boundaries consume part of the nominal system prompt.
 STATIC_APPENDIX = (
     "\nREFERENCE POLICY APPENDIX (stable, production-scale classifier):\n"
     + (
