@@ -1,0 +1,62 @@
+
+════════════════════════════════════════════════════════════════════════
+  Stateless classifier sharding — Microsoft Foundry
+════════════════════════════════════════════════════════════════════════
+  model=FW-Kimi-K3 | run=a0daaec2fb | 2 waves × 3 concurrent | shards=4
+  Every measured user input is unique; only the ~6K-token system prefix is reusable.
+
+
+  ────────────────────────────────────────────────────────────
+  A. body single key
+  ────────────────────────────────────────────────────────────
+  pre-warming 1 key(s)... done
+  wave 1: warm 3/3 (100%) | avg cache 94.7% | latency p50 3750 / p90 7619 ms | errors 0
+  wave 2: warm 3/3 (100%) | avg cache 94.7% | latency p50 8392 / p90 17256 ms | errors 0
+
+  ────────────────────────────────────────────────────────────
+  B. body 4 shards
+  ────────────────────────────────────────────────────────────
+  pre-warming 4 key(s)... done
+  wave 1: warm 3/3 (100%) | avg cache 94.7% | latency p50 9491 / p90 15369 ms | errors 0
+  wave 2: warm 2/3 (67%) | avg cache 63.1% | latency p50 9145 / p90 15533 ms | errors 0
+
+  ────────────────────────────────────────────────────────────
+  C. header single value
+  ────────────────────────────────────────────────────────────
+  pre-warming 1 key(s)... done
+  wave 1: warm 2/3 (67%) | avg cache 63.1% | latency p50 6667 / p90 14262 ms | errors 0
+  wave 2: warm 3/3 (100%) | avg cache 94.7% | latency p50 9185 / p90 16217 ms | errors 0
+
+  ────────────────────────────────────────────────────────────
+  D. header 4 shards
+  ────────────────────────────────────────────────────────────
+  pre-warming 4 key(s)... done
+  wave 1: warm 2/3 (67%) | avg cache 63.1% | latency p50 7976 / p90 15493 ms | errors 0
+  wave 2: warm 3/3 (100%) | avg cache 94.7% | latency p50 8011 / p90 16231 ms | errors 0
+
+  ────────────────────────────────────────────────────────────
+  E. unique body + isolation key (true cold)
+  ────────────────────────────────────────────────────────────
+  wave 1: warm 0/3 (0%) | avg cache 0.0% | latency p50 6971 / p90 15525 ms | errors 0
+  wave 2: warm 0/3 (0%) | avg cache 0.0% | latency p50 7403 / p90 15994 ms | errors 0
+
+  ────────────────────────────────────────────────────────────
+  F. no explicit affinity
+  ────────────────────────────────────────────────────────────
+  wave 1: warm 2/3 (67%) | avg cache 63.1% | latency p50 10288 / p90 15076 ms | errors 0
+  wave 2: warm 1/3 (33%) | avg cache 31.6% | latency p50 7467 / p90 16829 ms | errors 0
+
+────────────────────────────────────────────────────────────────────────
+  SUMMARY — Foundry unique-content stateless classifier
+────────────────────────────────────────────────────────────────────────
+  Strategy                                 warm %  avg cache %    p50 ms    p90 ms  errors
+  ────────────────────────────────────────────────────────────────────────────────────────
+  A. body single key                         100%        94.7%      6071     12437       0
+  B. body 4 shards                            83%        78.9%      9318     15451       0
+  C. header single value                      83%        78.9%      7926     15240       0
+  D. header 4 shards                          83%        78.9%      7994     15862       0
+  E. unique body + isolation key (true cold)       0%         0.0%      7187     15759       0
+  F. no explicit affinity                     50%        47.3%      8878     15953       0
+
+  Compare A↔B (body sharding) and C↔D (header sharding); E is true cold; F is gateway defaults.
+

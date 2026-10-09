@@ -1,0 +1,50 @@
+
+════════════════════════════════════════════════════════════════════════
+  Stateless classifier sharding — direct Fireworks serverless
+════════════════════════════════════════════════════════════════════════
+  model=accounts/fireworks/models/kimi-k3 | run=8ecf42e5d2 | 3 waves × 12 concurrent | shards=12
+  Every measured user input is unique; only the ~6K-token system prefix is reusable.
+
+
+  ────────────────────────────────────────────────────────────
+  A. single shared key
+  ────────────────────────────────────────────────────────────
+  pre-warming 1 key(s)... done
+  wave 1: warm 11/12 (92%) | avg cache 86.7% | latency p50 5040 ms / p90 5605 ms
+  wave 2: warm 11/12 (92%) | avg cache 86.7% | latency p50 7218 ms / p90 8351 ms
+  wave 3: warm 12/12 (100%) | avg cache 94.6% | latency p50 6503 ms / p90 9514 ms
+
+  ────────────────────────────────────────────────────────────
+  B. 12 pre-warmed shards
+  ────────────────────────────────────────────────────────────
+  pre-warming 12 key(s)... done
+  wave 1: warm 10/12 (83%) | avg cache 78.8% | latency p50 4187 ms / p90 5661 ms
+  wave 2: warm 12/12 (100%) | avg cache 94.6% | latency p50 4780 ms / p90 8718 ms
+  wave 3: warm 12/12 (100%) | avg cache 94.6% | latency p50 5581 ms / p90 8846 ms
+
+  ────────────────────────────────────────────────────────────
+  C. unique key + isolation key per request (true cold)
+  ────────────────────────────────────────────────────────────
+  wave 1: warm 0/12 (0%) | avg cache 0.0% | latency p50 4675 ms / p90 6021 ms
+  wave 2: warm 0/12 (0%) | avg cache 0.0% | latency p50 5237 ms / p90 7126 ms
+  wave 3: warm 0/12 (0%) | avg cache 0.0% | latency p50 6307 ms / p90 7937 ms
+
+  ────────────────────────────────────────────────────────────
+  D. no explicit affinity
+  ────────────────────────────────────────────────────────────
+  wave 1: warm 11/12 (92%) | avg cache 86.7% | latency p50 4298 ms / p90 5138 ms
+  wave 2: warm 12/12 (100%) | avg cache 94.6% | latency p50 4838 ms / p90 7326 ms
+  wave 3: warm 12/12 (100%) | avg cache 94.6% | latency p50 5839 ms / p90 9555 ms
+
+────────────────────────────────────────────────────────────────────────
+  SUMMARY — unique-content stateless classifier
+────────────────────────────────────────────────────────────────────────
+  Strategy                                     warm %  avg cache %    p50 ms    p90 ms
+  ────────────────────────────────────────────────────────────────────────────────────
+  A. single shared key                            94%        89.3%      6253      7823
+  B. 12 pre-warmed shards                         94%        89.3%      4849      7742
+  C. unique key + isolation key per request (true cold)       0%         0.0%      5406      7028
+  D. no explicit affinity                         97%        92.0%      4992      7340
+
+  Interpret A vs B for sharding benefit; C uses a unique isolation key and must be ~0% warm (true cold); D measures gateway defaults.
+

@@ -1,0 +1,82 @@
+
+════════════════════════════════════════════════════════════════════════
+  prompt_cache_key (body) vs x-session-affinity (header) — direct Fireworks
+════════════════════════════════════════════════════════════════════════
+  Model: accounts/fireworks/models/kimi-k3  |  System prompt: 6193 chars
+
+════════════════════════════════════════════════════════════════════════
+  TEST 1 — Mechanism equivalence under concurrency
+════════════════════════════════════════════════════════════════════════
+  12 concurrent conversations per arm, two waves, distinct
+  messages per arm (rules out content-hash cross-warming):
+    A. body prompt_cache_key — one key per conversation
+    B. header x-session-affinity — one value per conversation
+    C. control — nothing sent (falls back to account-based affinity)
+  Expected: A and B warm on wave 2 (conversations spread across replicas);
+  C stays account-pinned, so under concurrent load it can
+  overflow its few pinned replicas and go cold.
+  Note: if C stays fully warm on wave 2, the router is likely applying
+  content-based session affinity (first-user-message hash) — also a
+  useful finding.
+
+
+  ────────────────────────────────────────────────────────────
+  ARM A. body prompt_cache_key (per-conversation)
+  ────────────────────────────────────────────────────────────
+  wave 1 (first touch):
+  wave 1: warm 0/12 (0%) | avg cached 0% | avg latency 4876 ms
+  wave 2 (same conversations, repeated):
+  wave 2: warm 6/12 (50%) | avg cached 50% | avg latency 3097 ms
+
+  ────────────────────────────────────────────────────────────
+  ARM B. header x-session-affinity (per-conversation)
+  ────────────────────────────────────────────────────────────
+  wave 1 (first touch):
+  wave 1: warm 0/12 (0%) | avg cached 0% | avg latency 4261 ms
+  wave 2 (same conversations, repeated):
+  wave 2: warm 7/12 (58%) | avg cached 58% | avg latency 5314 ms
+
+  ────────────────────────────────────────────────────────────
+  ARM C. control (no affinity — account fallback)
+  ────────────────────────────────────────────────────────────
+  wave 1 (first touch):
+  wave 1: warm 0/12 (0%) | avg cached 0% | avg latency 5313 ms
+  wave 2 (same conversations, repeated):
+  wave 2: warm 12/12 (100%) | avg cached 100% | avg latency 5271 ms
+
+  VERDICT: EQUIVALENT — both mechanisms cached under concurrency
+
+════════════════════════════════════════════════════════════════════════
+  TEST 2 — Cross-mechanism shared value
+════════════════════════════════════════════════════════════════════════
+  Prime the cache through ONE mechanism, warm-read through the OTHER,
+  using the SAME value string. If the read is warm, both mechanisms feed
+  the same routing session on the Fireworks gateway.
+
+  ────────────────────────────────────────────────────────────
+  body → header
+  ────────────────────────────────────────────────────────────
+  [prime via body] 9510 ms (cache write)
+  [read via header]  [ALLOW ] 11703 ms  [COLD (0 cached)]
+  ────────────────────────────────────────────────────────────
+  header → body
+  ────────────────────────────────────────────────────────────
+  [prime via header] 9654 ms (cache write)
+  [read via body]  [ALLOW ] 12930 ms  [WARM (100% cached)]
+
+  VERDICT: NOT CONFIRMED — see reads above
+
+════════════════════════════════════════════════════════════════════════
+  TEST 3 — Precedence (header value vs body value, different strings)
+════════════════════════════════════════════════════════════════════════
+  Fireworks gateway precedence: session headers rank above body
+  prompt_cache_key. We prime value P via the header, then send a call
+  with header=P + body=Q (Q never primed). Warm ⇒ the header value won.
+  Mirror case: header=R (never primed) + body=P. Cold ⇒ header still won.
+
+  [prime header=prec-header-primed] 6324 ms
+  call header=prec-header-primed + body=prec-body-unprimed: [WARM] (100% cached)
+  call header=prec-body-unprimed + body=prec-header-primed: [COLD] (0% cached)
+
+  VERDICT: HEADER OUTRANKS BODY confirmed
+

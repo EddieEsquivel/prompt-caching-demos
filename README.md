@@ -24,10 +24,14 @@ The demos prove caching is actually happening with hard numbers — token-level 
 | [cache_breakpoint_demo.py](cache_breakpoint_demo.py) | How does GPT-5.6's `prompt_cache_breakpoint` compare to Fireworks' `prompt_cache_key`? |
 | [kimi_responses_vs_chat_demo.py](kimi_responses_vs_chat_demo.py) | Does `prompt_cache_key` work the same through the Responses API and Chat Completions? |
 | [kimi_stored_responses_demo.py](kimi_stored_responses_demo.py) | What does `store=True` persist, and does caching work alongside it? |
+| [kimi_cache_key_vs_session_affinity_demo.py](kimi_cache_key_vs_session_affinity_demo.py) | Are body `prompt_cache_key` and header `x-session-affinity` functionally equivalent on direct Fireworks? |
+| [kimi_foundry_affinity_pass_through_demo.py](kimi_foundry_affinity_pass_through_demo.py) | Do both affinity mechanisms cache through Foundry in a real multi-turn conversation? |
+| [kimi_cache_key_sharding_demo.py](kimi_cache_key_sharding_demo.py) | For a stateless classifier with unique inputs, does sharding improve direct Fireworks cache reuse under load? |
+| [kimi_foundry_classifier_sharding_demo.py](kimi_foundry_classifier_sharding_demo.py) | Does the same stateless classifier sharding strategy work through Foundry? |
 
 ### The core equivalence
 
-> **`prompt_cache_key` (Fireworks) is the direct equivalent of `prompt_cache_breakpoint` (GPT).** Same outcome — the static system prompt is cached after the first request, and only the short user message is processed on subsequent calls. Different syntax: a top-level body field naming a cache bucket, vs. a per-content marker.
+> **`prompt_cache_key` (Fireworks) is the direct equivalent of `prompt_cache_breakpoint` (GPT).** Same outcome — the static system prompt is cached after the first request, and only the short user message is processed on subsequent calls. Different mechanism: GPT marks the cache boundary explicitly in content; Fireworks matches the longest cached prefix automatically, and `prompt_cache_key` routes requests that share it to the same replica(s) where that prefix is cached (it is equivalent to the `x-session-affinity` header, which takes precedence if both are sent).
 
 ---
 
@@ -41,6 +45,13 @@ The demos prove caching is actually happening with hard numbers — token-level 
 │                                    #   + TTFT cache proof for each API style
 ├── kimi_stored_responses_demo.py   # Responses API store=True lifecycle:
 │                                    #   create → GET retrieve → previous_response_id chain → delete
+├── kimi_cache_key_vs_session_affinity_demo.py
+│                                    # body key vs header on direct Fireworks
+├── kimi_foundry_affinity_pass_through_demo.py
+│                                    # definitive Foundry multi-turn token proof
+├── kimi_cache_key_sharding_demo.py # unique-input stateless classifier, direct
+├── kimi_foundry_classifier_sharding_demo.py
+│                                    # same classifier sharding matrix via Foundry
 ├── results/                         # Captured output from live runs (see below)
 ├── .env.example                     # Required environment variable
 └── .venv/                           # (gitignored) Python 3.14 + openai SDK
@@ -57,12 +68,15 @@ python -m venv .venv
 source .venv/bin/activate
 pip install openai requests
 
-export FOUNDRY_KEY="<your-foundry-key>"     # see .env.example
+cp .env.example .env    # then fill in FOUNDRY_KEY, FOUNDRY_ENDPOINT, model names
+set -a; source .env; set +a
 ```
 
-> **Never commit the key.** All three scripts read `FOUNDRY_KEY` from the environment and fail fast if it's unset.
+> **Never commit keys.** Foundry demos read `FOUNDRY_KEY`; direct Fireworks demos read `FIREWORKS_KEY`.
 
-Each script also has `FOUNDRY_ENDPOINT` / model names at the top — edit those if your Foundry project or deployment names differ.
+Foundry scripts read `FOUNDRY_ENDPOINT`, `KIMI_MODEL`, and `GPT_MODEL`. Direct
+Fireworks scripts read `FIREWORKS_BASE` and `FIREWORKS_MODEL`. Concurrency/shard
+counts are also environment-configurable; see `.env.example`.
 
 ---
 
@@ -104,7 +118,7 @@ Same model (`FW-Kimi-K3-3`), same cache key, **two API shapes**:
 
 Per the [Microsoft migration guide](https://learn.microsoft.com/en-us/azure/developer/ai/how-to/azure-openai-to-responses), the Responses API path uses the standard OpenAI SDK pointed at the `/openai/v1/` base URL. **Gotcha found in testing:** this Foundry gateway requires fully typed input items (`{"type": "message", "role": ..., "content": [{"type": "input_text", "text": ...}]}`) — the plain `{"role", "content"}` shortcut from the docs fails validation with `Invalid value: ''`. Also, `prompt_cache_isolation_key` is rejected by the Responses API (Chat Completions only); the demo enforces true-cold there with a unique cache-bucket name per call.
 
-**Sample result** ([full output](results/kimi_responses_vs_chat_demo_output.txt)): both API shapes show 95–100% cached tokens on warm calls — the backend cache bucket is shared across API styles, since it's keyed by the `prompt_cache_key` string, not the endpoint.
+**Sample result** ([full output](results/kimi_responses_vs_chat_demo_output.txt)): both API shapes show 95–100% cached tokens on warm calls — the same `prompt_cache_key` routes both API styles to the same replica(s), so the cached prefix is reused regardless of endpoint.
 
 ---
 
@@ -118,6 +132,77 @@ Walks the full **stateful Responses API lifecycle** with `store=True`:
 4. **Delete** — cleanup via the API
 
 **Sample result** ([full output](results/kimi_stored_responses_demo_output.txt)): all four operations succeed on FW-Kimi-K3-3, with prompt caching active alongside storage (95–96% cached tokens).
+
+---
+
+## Demos 4–7 — affinity and stateless-classifier sharding
+
+- **Direct mechanism equivalence:** `kimi_cache_key_vs_session_affinity_demo.py`
+  compares body `prompt_cache_key` and header `x-session-affinity`, including
+  cross-mechanism reuse and header-over-body precedence.
+- **Foundry multi-turn proof:** `kimi_foundry_affinity_pass_through_demo.py`
+  completes all responses so Foundry emits
+  `usage.prompt_tokens_details.cached_tokens`. Both mechanisms validated at
+  96.8–97.0% cached on later turns.
+- **Direct stateless classifier:** `kimi_cache_key_sharding_demo.py` sends a
+  byte-identical long policy prefix with unique classifier inputs and compares
+  one key, N sharded keys, unique keys, and no explicit affinity.
+- **Foundry stateless classifier:** `kimi_foundry_classifier_sharding_demo.py`
+  runs the same workload through Foundry and compares both body-key and header
+  sharding.
+
+Live stateless-classifier results:
+
+- **Direct Fireworks (12 concurrent):** one shared key and 12 sharded keys both
+  averaged 94% warm. Sharding improved mean p50 latency (~6.25s → ~4.85s) but
+  did not improve p90 or hit rate at this load. The isolation-key control was
+  exactly 0% warm.
+- **Foundry (3 concurrent, rate-limit-safe):** body single key 100% warm; body
+  shards 83%; header single/shards 83%; isolation-key control 0%; no-affinity
+  control 50%. Sharding did not improve hit rate at this low concurrency.
+
+**Interpretation:** sharding is a capacity/load-distribution technique, not a
+guaranteed cache-hit improvement. Use the smallest shard count that prevents a
+single affinity domain from saturating. Extra shards create additional cache
+domains that must each be warmed and can be evicted independently. Foundry's
+token rate limit prevented a clean high-concurrency saturation comparison in
+this run; the lower-concurrency result proves both mechanisms cache stateless
+unique-input traffic, not that four shards are universally optimal.
+
+### Why cache blocks matter for stateless fan-out
+
+KV prefix reuse is performed in token blocks. The variable suffix must begin
+*after at least one complete reusable block*; otherwise the cache has no full
+block to reuse even when routing lands on the right replica.
+
+This matters more for a stateless classifier than for a growing conversation:
+
+```text
+system policy (~1,280 tokens) + unique item
+                        ↑ variable content begins before a full Kimi block
+                        → 0 cached tokens observed
+
+larger stable policy prefix + unique item
+                        ↑ multiple full blocks precede the variable suffix
+                        → aligned cached-token counts observed
+```
+
+In live Kimi K3 validation, varying suffixes over a large stable prefix returned
+`28,672` cached tokens — exactly `14 × 2,048`. This is **observed implementation
+behavior**, not a universal API guarantee for every model or deployment.
+
+Consequences:
+
+1. Put all stable instructions, examples, schemas, and tool definitions first.
+2. Put per-request classifier content last.
+3. Make the stable prefix large enough to complete one or more cache blocks.
+4. `prompt_cache_key`/`x-session-affinity` and sharding control *where* requests
+   route; they cannot make an undersized stable prefix cacheable.
+5. A unique `prompt_cache_key` is **not** a cold-cache guarantee: it changes
+   routing, not cache namespace. Use a unique `prompt_cache_isolation_key` when
+   a test must prohibit cross-request prefix reuse.
+6. After the prefix is cacheable, shard a bounded set of stable keys to balance
+   reuse against multi-replica throughput.
 
 ---
 
@@ -137,17 +222,18 @@ Zero Data Retention is Fireworks' default: prompt and generation data exist only
 
 ## Reading the results — SA/SE notes
 
-- **`cached_tokens` is the reliable signal.** Some runs show intermittent 0%-cache calls (bucket evicted under load) — cache retention is best-effort, minutes to hours. Expect occasional cold re-writes in production; steady traffic to one stable key maximizes hit rate.
+- **`cached_tokens` is the reliable signal.** Some runs show intermittent 0%-cache calls (bucket evicted under load) — cache retention is best-effort, minutes to hours. Expect occasional cold re-writes in production; steady traffic to a stable key maximizes hit rate. At high request rates, shard the key (e.g. `safety-classifier-v1-0` … `-N`): KV cache is replica-local, and a single key concentrates load on a few replicas.
 - **Ignore single-run speedup averages** on reasoning models — generation-time variance dominates. Trust the cached-token column and the TTFT A/B.
 - **Cache key choice matters:** one stable key per system-prompt version (e.g. `safety-classifier-v1`). Bump the version suffix whenever the prompt changes — a changed prefix invalidates the cache anyway, and a new key keeps buckets clean.
+- **Cache blocks matter:** observed Kimi K3 cache hits are aligned to 2,048-token blocks. A ~1,280-token static classifier prefix produced 0 cached tokens when the user suffix varied; a larger stable prefix cached complete blocks. Treat 2,048 as observed model-path behavior, not a cross-model contract.
 - **Accuracy is unaffected.** Caching reuses encoded input state only; every response is sampled fresh. All demos classify 5/5 correctly warm or cold.
-- **Minimum prefix:** GPT-5.x requires ≥1,024 tokens for the cache breakpoint; Fireworks caching benefits from long stable prefixes similarly. The demo system prompt is ~1,280 tokens to be production-realistic.
+- **Minimum prefix:** GPT-5.x requires ≥1,024 tokens for the cache breakpoint. Fireworks/Kimi behavior is block-aligned; for stateless unique-suffix fan-out, use a stable prefix comfortably larger than one observed cache block.
 
 ---
 
 ## Key takeaways for customer conversations
 
-1. **`prompt_cache_key` ≡ `prompt_cache_breakpoint`** — same savings, one body field, no sticky routing or header changes.
+1. **`prompt_cache_key` ≡ `prompt_cache_breakpoint`** — same savings, one body field, no header changes (the key itself provides the replica affinity).
 2. **~50% off cached input tokens** (Fireworks default discount) + **~1.5× lower warm latency** for this workload shape.
 3. **Works through both API shapes** — customer can standardize on the Responses API across all models, or keep Chat Completions; caching is identical.
 4. **Caching and storage are independent** — `prompt_cache_key` (RAM-only KV reuse) and `store=True` (server-side persistence) can be used together or separately.
