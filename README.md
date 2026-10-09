@@ -199,6 +199,23 @@ This is **architecture-, engine-, and deployment-specific**, not a universal
 API guarantee. Deployment flags and snapshot-capture strategy can override the
 underlying defaults, and token-granular models use granularity 1.
 
+A follow-up boundary sweep confirmed the effective 4,096-token step at three
+successive boundaries (all counts are server-reported rendered input tokens):
+
+| Around boundary | Last observed lower tier | First observed next tier |
+|---|---:|---:|
+| 4,096 | 4,114 total → 0 cached | 4,203 total → 4,096 cached |
+| 8,192 | 8,197 total → 4,096 cached | 8,282 total → 8,192 cached |
+| 12,288 | 12,275 total → 8,192 cached | 12,362 total → 12,288 cached |
+
+Every nonzero cached result was divisible by 4,096. The small offset between
+the nominal boundary and reported total tokens is expected: total prompt tokens
+include the variable suffix and chat-template tokens, while the *stable prefix*
+must itself cross the capture boundary. Individual reads can still miss because
+cache admission/placement is best-effort; the boundary is established by the
+quantized nonzero values and repeated threshold transitions, not a promise that
+every read hits.
+
 Consequences:
 
 1. Put all stable instructions, examples, schemas, and tool definitions first.
