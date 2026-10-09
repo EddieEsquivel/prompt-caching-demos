@@ -216,6 +216,20 @@ cache admission/placement is best-effort; the boundary is established by the
 quantized nonzero values and repeated threshold transitions, not a promise that
 every read hits.
 
+A separate 30-trial sub-4,096 sweep distinguished partial-prefix reuse from
+exact full-prompt reuse:
+
+- **Stable system + varying user suffix:** 0 cached tokens in every trial
+  (rendered totals from ~462 to ~4,033 tokens).
+- **Identical full prompt repeated:** caching sometimes occurred below 4,096,
+  including 1,123/1,140, 1,463/1,482, and 4,013/4,033 cached tokens. Admission
+  was intermittent at several sizes.
+
+Therefore 4,096 is the effective boundary for *partial-prefix snapshots with a
+changing suffix* on this deployment. It is not a universal minimum for every
+kind of cache reuse: exact full-prompt repeats can use a separate exact-path
+cache below that boundary.
+
 Consequences:
 
 1. Put all stable instructions, examples, schemas, and tool definitions first.
