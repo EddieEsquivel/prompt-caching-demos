@@ -187,12 +187,17 @@ larger stable policy prefix + unique item
                         → aligned cached-token counts observed
 ```
 
-In live Kimi K3 validation, varying suffixes over a large stable prefix returned
-`28,672` cached tokens — exactly `28 × 1,024`. Fireworks serving metadata
-classifies Kimi K3 as a GDN/Mamba-state model with a 1,024-token default cache
-granularity. This is **architecture- and deployment-specific**, not a universal
-API guarantee; a deployment can override it (for example, some GLM-5.3 shapes
-use `--mamba-block-size=2048`), and token-granular models use granularity 1.
+In live standard Kimi K3 validation, varying suffixes did not reuse a partial
+prefix until the rendered request crossed roughly 4,096 tokens; reported cached
+lengths were then exact 4,096-token multiples (`4,096`, `28,672`, etc.).
+Fireworks serving metadata classifies Kimi K3 as a GDN/Mamba-state model with
+1,024-token underlying state pages, while the tested production deployment's
+effective reusable snapshot/capture boundary is 4,096 tokens. These are
+different layers of granularity.
+
+This is **architecture-, engine-, and deployment-specific**, not a universal
+API guarantee. Deployment flags and snapshot-capture strategy can override the
+underlying defaults, and token-granular models use granularity 1.
 
 Consequences:
 
@@ -228,12 +233,13 @@ Zero Data Retention is Fireworks' default: prompt and generation data exist only
 - **`cached_tokens` is the reliable signal.** Some runs show intermittent 0%-cache calls (bucket evicted under load) — cache retention is best-effort, minutes to hours. Expect occasional cold re-writes in production; steady traffic to a stable key maximizes hit rate. At high request rates, shard the key (e.g. `safety-classifier-v1-0` … `-N`): KV cache is replica-local, and a single key concentrates load on a few replicas.
 - **Ignore single-run speedup averages** on reasoning models — generation-time variance dominates. Trust the cached-token column and the TTFT A/B.
 - **Cache key choice matters:** one stable key per system-prompt version (e.g. `safety-classifier-v1`). Bump the version suffix whenever the prompt changes — a changed prefix invalidates the cache anyway, and a new key keeps buckets clean.
-- **Cache blocks matter:** the tested Kimi K3 path uses 1,024-token cache
-  granularity. A ~1,280-token static classifier prefix still produced 0 cached
-  tokens with unique suffixes because chat formatting and cache boundaries can
-  consume part of that prefix; use a comfortably larger stable prefix. Other
-  architectures/engines can be token-granular or use 64, 256, 2,048, 4,096,
-  or deployment-overridden page sizes.
+- **Cache boundaries matter:** Kimi K3 has 1,024-token underlying Mamba state
+  pages, but the tested standard serverless deployment exposed reusable
+  varying-suffix snapshots at 4,096-token boundaries. A ~1,280-token stable
+  classifier prefix therefore produced 0 partial-prefix cache hits. Exact full
+  prompt repeats can still hit a separate exact-path cache below 4,096. Other
+  architectures/engines can be token-granular or use 64, 256, 1,024, 2,048,
+  4,096, or deployment-overridden boundaries.
 - **Accuracy is unaffected.** Caching reuses encoded input state only; every response is sampled fresh. All demos classify 5/5 correctly warm or cold.
 - **Minimum prefix:** GPT-5.x requires ≥1,024 tokens for the cache breakpoint. Fireworks/Kimi behavior is block-aligned; for stateless unique-suffix fan-out, use a stable prefix comfortably larger than one observed cache block.
 
